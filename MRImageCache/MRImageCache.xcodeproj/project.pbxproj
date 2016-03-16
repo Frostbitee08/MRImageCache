@@ -10,6 +10,8 @@
 		847403301C99E87C001FEC2B /* MRImageCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 8474032F1C99E87C001FEC2B /* MRImageCache.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		847403371C99E87C001FEC2B /* MRImageCache.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8474032C1C99E87C001FEC2B /* MRImageCache.framework */; };
 		8474033C1C99E87C001FEC2B /* MRImageCacheTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474033B1C99E87C001FEC2B /* MRImageCacheTests.m */; };
+		847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 847403461C99EE31001FEC2B /* MRImageCacheManager.h */; };
+		847403491C99EE31001FEC2B /* MRImageCacheManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 847403471C99EE31001FEC2B /* MRImageCacheManager.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +31,8 @@
 		847403361C99E87C001FEC2B /* MRImageCacheTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MRImageCacheTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8474033B1C99E87C001FEC2B /* MRImageCacheTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MRImageCacheTests.m; sourceTree = "<group>"; };
 		8474033D1C99E87C001FEC2B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		847403461C99EE31001FEC2B /* MRImageCacheManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRImageCacheManager.h; sourceTree = "<group>"; };
+		847403471C99EE31001FEC2B /* MRImageCacheManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRImageCacheManager.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +77,8 @@
 			children = (
 				8474032F1C99E87C001FEC2B /* MRImageCache.h */,
 				847403311C99E87C001FEC2B /* Info.plist */,
+				847403461C99EE31001FEC2B /* MRImageCacheManager.h */,
+				847403471C99EE31001FEC2B /* MRImageCacheManager.m */,
 			);
 			path = MRImageCache;
 			sourceTree = "<group>";
@@ -93,6 +99,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */,
 				847403301C99E87C001FEC2B /* MRImageCache.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -193,6 +200,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				847403491C99EE31001FEC2B /* MRImageCacheManager.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
