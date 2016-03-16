@@ -12,6 +12,8 @@
 		8474033C1C99E87C001FEC2B /* MRImageCacheTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474033B1C99E87C001FEC2B /* MRImageCacheTests.m */; };
 		847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 847403461C99EE31001FEC2B /* MRImageCacheManager.h */; };
 		847403491C99EE31001FEC2B /* MRImageCacheManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 847403471C99EE31001FEC2B /* MRImageCacheManager.m */; };
+		8474034D1C99F632001FEC2B /* MRUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 8474034B1C99F632001FEC2B /* MRUtilities.h */; };
+		8474034E1C99F632001FEC2B /* MRUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474034C1C99F632001FEC2B /* MRUtilities.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,6 +35,8 @@
 		8474033D1C99E87C001FEC2B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		847403461C99EE31001FEC2B /* MRImageCacheManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRImageCacheManager.h; sourceTree = "<group>"; };
 		847403471C99EE31001FEC2B /* MRImageCacheManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRImageCacheManager.m; sourceTree = "<group>"; };
+		8474034B1C99F632001FEC2B /* MRUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MRUtilities.h; sourceTree = "<group>"; };
+		8474034C1C99F632001FEC2B /* MRUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MRUtilities.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +83,8 @@
 				847403311C99E87C001FEC2B /* Info.plist */,
 				847403461C99EE31001FEC2B /* MRImageCacheManager.h */,
 				847403471C99EE31001FEC2B /* MRImageCacheManager.m */,
+				8474034B1C99F632001FEC2B /* MRUtilities.h */,
+				8474034C1C99F632001FEC2B /* MRUtilities.m */,
 			);
 			path = MRImageCache;
 			sourceTree = "<group>";
@@ -101,6 +107,7 @@
 			files = (
 				847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */,
 				847403301C99E87C001FEC2B /* MRImageCache.h in Headers */,
+				8474034D1C99F632001FEC2B /* MRUtilities.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -201,6 +208,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				847403491C99EE31001FEC2B /* MRImageCacheManager.m in Sources */,
+				8474034E1C99F632001FEC2B /* MRUtilities.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

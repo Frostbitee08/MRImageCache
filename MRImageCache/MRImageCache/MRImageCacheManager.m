@@ -7,6 +7,7 @@
 //
 
 #import "MRImageCacheManager.h"
+#import "MRUtilities.h"
 
 static NSInteger maximumDataBaseSize;
 static NSTimeInterval idleRange;
@@ -16,6 +17,15 @@ static BOOL useIdleRange;
 @implementation MRImageCacheManager
 
 #pragma mark - Class Methods
+
++ (instancetype)sharedInstance {
+    static id _instance = nil;
+    static dispatch_once_t token;
+    dispatch_once(&token, ^{
+        _instance = [[self alloc] init];
+    });
+    return _instance;
+}
 
 + (void)setIdleRetainRange:(NSTimeInterval)range {
     if (range <= 0) {

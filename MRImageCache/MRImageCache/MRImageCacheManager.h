@@ -12,6 +12,8 @@
 
 //Class Methods
 
++ (instancetype)sharedInstance;
+
 + (void)setIdleRetainRange:(NSTimeInterval)range;
 
 + (void)setMaximumDatabaseSize:(NSInteger)kilobytes;
