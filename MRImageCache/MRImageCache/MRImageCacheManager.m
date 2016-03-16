@@ -49,24 +49,24 @@ static BOOL useIdleRange;
 
 #pragma mark - Modifiers
 
-- (void)addImage:(UIImage *)image withIdentification:(NSString *)identification {
+- (BOOL)addImage:(UIImage *)image withIdentification:(NSString *)identification {
+    return false;
+}
+
+- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
     
 }
 
-- (void)addImageFromURL:(NSURL *)url {
+- (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
     
 }
 
-- (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification {
-    
+- (BOOL)removeImage:(UIImage *)image {
+    return false;
 }
 
-- (void)removeImage:(UIImage *)image {
-    
-}
-
-- (void)removeImageWithIdentification:(id)identification {
-    
+- (BOOL)removeImageWithIdentification:(id)identification {
+    return false;
 }
 
 #pragma mark - Accessors
@@ -75,8 +75,8 @@ static BOOL useIdleRange;
     return nil;
 }
 
-- (UIImage *)imageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve {
-    return nil;
+- (void)fetchImageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+    
 }
 
 @end

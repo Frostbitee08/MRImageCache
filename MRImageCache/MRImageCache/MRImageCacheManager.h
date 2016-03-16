@@ -18,20 +18,20 @@
 
 //Modifiers
 
-- (void)addImage:(UIImage *)image withIdentification:(NSString *)identification;
+- (BOOL)addImage:(UIImage *)image withIdentification:(NSString *)identification;
 
-- (void)addImageFromURL:(NSURL *)url;
+- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification;
+- (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (void)removeImage:(UIImage *)image;
+- (BOOL)removeImage:(UIImage *)image;
 
-- (void)removeImageWithIdentification:(id)identification;
+- (BOOL)removeImageWithIdentification:(id)identification;
 
 //Accessors
 
 - (UIImage *)imageWithIdentification:(id)identification;
 
-- (UIImage *)imageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve;
+- (void)fetchImageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 @end
