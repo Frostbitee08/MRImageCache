@@ -81,8 +81,8 @@ static BOOL useIdleRange;
 
 #pragma mark - Accessors
 
-- (UIImage *)imageWithIdentification:(id)identification {
-    return nil;
+- (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage *, NSError *))handler {
+    
 }
 
 - (void)fetchImageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler {

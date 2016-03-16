@@ -32,7 +32,7 @@
 
 //Accessors
 
-- (UIImage *)imageWithIdentification:(id)identification;
+- (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 - (void)fetchImageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
