@@ -306,6 +306,7 @@
 		847403411C99E87C001FEC2B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -316,12 +317,17 @@
 				PRODUCT_BUNDLE_IDENTIFIER = roccodelpriore.MRImageCache;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				WARNING_CFLAGS = (
+					"-Wall",
+					"-Werror",
+				);
 			};
 			name = Debug;
 		};
 		847403421C99E87C001FEC2B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -332,6 +338,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = roccodelpriore.MRImageCache;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				WARNING_CFLAGS = (
+					"-Wall",
+					"-Werror",
+				);
 			};
 			name = Release;
 		};
