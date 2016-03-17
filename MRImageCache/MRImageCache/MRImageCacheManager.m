@@ -75,8 +75,16 @@ static BOOL useIdleRange;
         
         fileSystemMap = [NSMutableDictionary dictionary];
         memoryMap     = [NSMutableDictionary dictionary];
+		
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+		
     }
     return self;
+}
+
+
+- (void)memoryWarningReceived {
+	// Cleanup.
 }
 
 #pragma mark - Helpers

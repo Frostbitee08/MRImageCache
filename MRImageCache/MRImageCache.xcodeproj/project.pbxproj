@@ -10,7 +10,7 @@
 		847403301C99E87C001FEC2B /* MRImageCache.h in Headers */ = {isa = PBXBuildFile; fileRef = 8474032F1C99E87C001FEC2B /* MRImageCache.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		847403371C99E87C001FEC2B /* MRImageCache.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8474032C1C99E87C001FEC2B /* MRImageCache.framework */; };
 		8474033C1C99E87C001FEC2B /* MRImageCacheTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474033B1C99E87C001FEC2B /* MRImageCacheTests.m */; };
-		847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 847403461C99EE31001FEC2B /* MRImageCacheManager.h */; };
+		847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 847403461C99EE31001FEC2B /* MRImageCacheManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		847403491C99EE31001FEC2B /* MRImageCacheManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 847403471C99EE31001FEC2B /* MRImageCacheManager.m */; };
 		8474034D1C99F632001FEC2B /* MRUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 8474034B1C99F632001FEC2B /* MRUtilities.h */; };
 		8474034E1C99F632001FEC2B /* MRUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474034C1C99F632001FEC2B /* MRUtilities.m */; };
@@ -400,6 +400,7 @@
 				847403421C99E87C001FEC2B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		847403431C99E87C001FEC2B /* Build configuration list for PBXNativeTarget "MRImageCacheTests" */ = {
 			isa = XCConfigurationList;
@@ -408,6 +409,7 @@
 				847403451C99E87C001FEC2B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
