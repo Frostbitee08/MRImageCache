@@ -134,6 +134,8 @@ static BOOL useIdleRange;
     }
 }
 
+//TODO: Add NSError for MRIErrorType Enum
+
 #pragma mark - Modifiers
 
 - (void)addImage:(UIImage *)image withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {

@@ -19,6 +19,11 @@
 + (void)setMaximumDatabaseSize:(NSInteger)kilobytes;
 
 //Add Images
+/*
+ Add methods will download and add an image reguardless of whether it already exists.
+ If you are unsure whether an image already exists, and do not want to add a duplicate,
+ please use the fetch methods.
+*/
 
 - (void)addImage:(UIImage *)image withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
@@ -35,6 +40,9 @@
 - (void)removeImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 //Request Images
+/*
+ Fetch methods check to see if an image exists before adding and returning.
+*/
 
 - (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
