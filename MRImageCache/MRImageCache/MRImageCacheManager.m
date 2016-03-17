@@ -11,6 +11,7 @@
 
 static const char *fileSystemQueueTitle = "fs";
 static const char *networkQueueTitle = "nw";
+static const float networkRequesTimeout = 30.0f;
 
 static NSInteger maximumDataBaseSize;
 static NSTimeInterval idleRange;
@@ -80,6 +81,14 @@ static BOOL useIdleRange;
 
 #pragma mark - Helpers
 
+- (oneway void)_changeImageIdentifierFrom:(id)from to:(id)to {
+    UIImage *image = memoryMap[from];
+    [memoryMap removeObjectForKey:from];
+    [memoryMap setObject:image forKey:to];
+    
+    //TODO: Also change the identification on the filesystem
+}
+
 - (oneway UIImage *)_imageFromMemoryWithIdentification:(id)identification andUrl:(NSURL *)url {
     if (identification) {
         if ([memoryMap.allKeys containsObject:identification]) {
@@ -89,9 +98,7 @@ static BOOL useIdleRange;
     if (url) {
         if ([memoryMap.allKeys containsObject:url.absoluteString]) {
             if (identification) {
-                UIImage *image = memoryMap[url.absoluteString];
-                [memoryMap removeObjectForKey:url.absoluteString];
-                [memoryMap setObject:image forKey:identification];
+                [self _changeImageIdentifierFrom:url.absoluteString to:identification];
                 return memoryMap[identification];
             }
             
@@ -102,36 +109,63 @@ static BOOL useIdleRange;
     return nil;
 }
 
-- (oneway UIImage *)_imageFromFilesystemWithIdentification:(id)identification andUrl:(NSURL *)url {
-    return nil;
-}
-
-- (oneway UIImage *)_localImageWithIdentification:(id)identification andUrl:(NSURL *)url {
-    UIImage *memoryImage = [self _imageFromMemoryWithIdentification:identification andUrl:url];
-    if (memoryImage) return memoryImage;
+- (void)_imageFromFilesystemWithIdentification:(id)identification andUrl:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+    NSURL *imageUrl = nil;
+    if (identification) {
+        if ([fileSystemMap.allKeys containsObject:identification]) {
+            imageUrl = fileSystemMap[identification];
+        }
+    }
+    if (url && imageUrl == nil) {
+        if ([fileSystemMap.allKeys containsObject:url.absoluteString]) {
+            imageUrl = fileSystemMap[url.absoluteString];
+        }
+    }
     
-    UIImage *filesystemImage = [self _imageFromFilesystemWithIdentification:identification andUrl:url];
-    if (filesystemImage) return filesystemImage;
-    
-    return nil;
+    NSError *error = [[NSError alloc] initWithDomain:@"domain" code:404 userInfo:nil];
+    if (imageUrl == nil) handler(nil, error);
+    else {
+        dispatch_barrier_async(fileSystemQueue, ^{
+            UIImage *image = [UIImage imageWithContentsOfFile:imageUrl.path];
+            
+            if (image) handler(image, nil);
+            else       handler(nil, error);
+        });
+    }
 }
 
 #pragma mark - Modifiers
 
 - (void)addImage:(UIImage *)image withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    
+    dispatch_barrier_async(fileSystemQueue, ^{
+        
+    });
 }
 
 - (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    
+    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:networkRequesTimeout];
+    [self addImageWithRequest:request withIdentification:url.absoluteString completionHandler:handler];
 }
 
 - (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    
+    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:networkRequesTimeout];
+    [self addImageWithRequest:request withIdentification:identification completionHandler:handler];
 }
 
 - (void)addImageWithRequest:(NSURLRequest *)request withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    
+    dispatch_barrier_async(networkQueue, ^{
+        NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
+            if (error) {
+                handler(nil, error);
+            }
+            else {
+                UIImage *image = [UIImage imageWithContentsOfFile:location.path];
+                [self addImage:image withIdentification:identification completionHandler:handler];
+            }
+        }];
+        
+        [task resume];
+    });
 }
 
 - (void)removeImage:(UIImage *)image completionHandler:(void (^)(UIImage * image, NSError * error))handler {
@@ -145,34 +179,29 @@ static BOOL useIdleRange;
 #pragma mark - Accessors
 
 - (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage *, NSError *))handler {
-    UIImage *image = [self _localImageWithIdentification:identification andUrl:nil];
-    NSError *error = [[NSError alloc] initWithDomain:@"domain" code:404 userInfo:nil];
+    UIImage *image = [self _imageFromMemoryWithIdentification:identification andUrl:nil];
     
     if (image) handler(image, nil);
-    else       handler(nil, error);
+    else       [self _imageFromFilesystemWithIdentification:identification andUrl:nil completionHandler:handler];
 }
 
 - (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    UIImage *image = [self _localImageWithIdentification:identification andUrl:url];
+    UIImage *image = [self _imageFromMemoryWithIdentification:identification andUrl:url];
     
     if (image) handler(image, nil);
-    else       [self addImageFromURL:url withIdentification:identification completionHandler:handler];
+    else  {
+        [self _imageFromFilesystemWithIdentification:identification andUrl:nil completionHandler:^(UIImage *image, NSError *error) {
+            if (image) handler(image, error);
+            else       [self addImageFromURL:url withIdentification:identification completionHandler:handler];
+        }];
+    }
 }
 
 - (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromRequest:(NSURLRequest *)request completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    UIImage *image = [self _localImageWithIdentification:identification andUrl:nil];
-    
-    if (image) handler(image, nil);
-    else       [self addImageWithRequest:request withIdentification:identification completionHandler:handler];
-}
-
-- (void)fetchImageWithURL:(NSURL *)url cacheIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    UIImage *image = [self _localImageWithIdentification:nil andUrl:url];
-    NSError *error = [[NSError alloc] initWithDomain:@"domain" code:404 userInfo:nil];
-    
-    if (image)         handler(image, nil);
-    else if (retrieve) [self addImageFromURL:url completionHandler:handler];
-    else               handler(nil, error);
+    [self fetchImageWithIdentification:identification completionHandler:^(UIImage *image, NSError *error) {
+        if (image) handler(image, error);
+        else       [self addImageWithRequest:request withIdentification:identification completionHandler:handler];
+    }];
 }
 
 @end

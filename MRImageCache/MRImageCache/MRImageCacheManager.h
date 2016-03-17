@@ -42,6 +42,4 @@
 
 - (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromRequest:(NSURLRequest *)request completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (void)fetchImageWithURL:(NSURL *)url cacheIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler;
-
 @end
