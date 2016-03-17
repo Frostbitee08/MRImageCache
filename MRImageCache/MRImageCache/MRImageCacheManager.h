@@ -10,30 +10,38 @@
 
 @interface MRImageCacheManager : NSObject
 
-//Class Methods
-
 + (instancetype)sharedInstance;
+
+//Settings
 
 + (void)setIdleRetainRange:(NSTimeInterval)range;
 
 + (void)setMaximumDatabaseSize:(NSInteger)kilobytes;
 
-//Modifiers
+//Add Images
 
-- (BOOL)addImage:(UIImage *)image withIdentification:(NSString *)identification;
+- (void)addImage:(UIImage *)image withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 - (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 - (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (BOOL)removeImage:(UIImage *)image;
+- (void)addImageWithRequest:(NSURLRequest *)request withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (BOOL)removeImageWithIdentification:(id)identification;
+//Remove Images
 
-//Accessors
+- (void)removeImage:(UIImage *)image completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+
+- (void)removeImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+
+//Request Images
 
 - (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (void)fetchImageWithURL:(NSURL *)url retrieveIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+
+- (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromRequest:(NSURLRequest *)request completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+
+- (void)fetchImageWithURL:(NSURL *)url cacheIfNecessary:(BOOL)retrieve completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 @end
