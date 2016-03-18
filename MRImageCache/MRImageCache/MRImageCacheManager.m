@@ -120,7 +120,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 #pragma mark - Helpers
 
 - (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
-    // TODO: Put this on write thread somehow
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
         if (error) {
@@ -250,19 +249,20 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
             if (error) { handler(nil, error); return; }
             
-            NSError *error2 = nil;
-            NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
-            
-            
-            if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
-                handler(nil, error2);
-            }
-            else {
-                [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
-                    if (error) handler(nil, error);
-                    else       handler(image, nil);
-                }];
-            }
+            dispatch_barrier_async(fileSystemQueue, ^{
+                NSError *error2 = nil;
+                NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
+                
+                if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
+                    handler(nil, error2);
+                }
+                else {
+                    [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
+                        if (error) handler(nil, error);
+                        else       handler(image, nil);
+                    }];
+                }
+            });
         }];
         [task resume];
     }
