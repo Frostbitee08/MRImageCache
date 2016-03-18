@@ -187,12 +187,12 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Accessors
 
-- (void)fetchImageAssetWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
 	//
 }
 
-- (void)fetchImageAssetWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-	[self fetchImageAssetWithRequest:nil uniqueIdentifier:identifier targetDomain:domain completionHandler:handler];
+- (void)fetchImageWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+	[self fetchImageWithRequest:nil uniqueIdentifier:identifier targetDomain:domain completionHandler:handler];
 }
 
 #pragma mark - Pass Through
@@ -209,12 +209,12 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     [self removeImageWithIdentifier:identifier targetDomain:nil completionHandler:handler];
 }
 
-- (void)fetchImageAssetWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-    [self fetchImageAssetWithRequest:request uniqueIdentifier:identifer targetDomain:nil completionHandler:handler];
+- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+    [self fetchImageWithRequest:request uniqueIdentifier:identifer targetDomain:nil completionHandler:handler];
 }
 
-- (void)fetchImageAssetWithUniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *, NSError *))handler {
-    [self fetchImageAssetWithUniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
+- (void)fetchImageWithUniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *, NSError *))handler {
+    [self fetchImageWithUniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
 }
 
 @end
