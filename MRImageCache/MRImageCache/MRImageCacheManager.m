@@ -115,58 +115,46 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Helpers
 
-- (void)_changeImageIdentifierFrom:(id)from to:(id)to {
-	// not thread safe. 
-    UIImage *image = memoryMap[from];
-    [memoryMap removeObjectForKey:from];
-    [memoryMap setObject:image forKey:to];
+- (void)_updateFileSystemMapWithURL:(NSURL *)location forIdentifier:(id)identification inTargetDomain:(NSString *)domain {
     
-    //TODO: Also change the identification on the filesystem
 }
 
-- (oneway UIImage *)_imageFromMemoryWithIdentification:(id)identification andUrl:(NSURL *)url {
-    if (identification) {
-        if ([memoryMap.allKeys containsObject:identification]) {
-            return memoryMap[identification];
-        }
-    }
-    if (url) {
-        if ([memoryMap.allKeys containsObject:url.absoluteString]) {
-            if (identification) {
-                [self _changeImageIdentifierFrom:url.absoluteString to:identification];
-                return memoryMap[identification];
-            }
-            
-            return memoryMap[url.absoluteString];
-        }
-    }
+- (void)_updateMemoryMapWithImage:(UIImage *)image forIdentifier:(id)identification inTargetDomain:(NSString *)domain {
     
+}
+
+- (NSURL *)_pathForIdentifier:(id)identification inTargetDomain:(NSString *)domain {
     return nil;
 }
 
-- (void)_imageFromFilesystemWithIdentification:(id)identification andUrl:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    NSURL *imageUrl = nil;
-    if (identification) {
-        if ([fileSystemMap.allKeys containsObject:identification]) {
-            imageUrl = fileSystemMap[identification];
+- (oneway UIImage *)_imageFromMemoryWithIdentification:(id)identification targetDomain:(NSString *)domain {
+    if (identification && [memoryMap.allKeys containsObject:domain]) {
+        NSDictionary *domainMap = memoryMap[domain];
+        if ([domainMap.allKeys containsObject:identification]) {
+            return domainMap[identification];
         }
     }
-    if (url && imageUrl == nil) {
-        if ([fileSystemMap.allKeys containsObject:url.absoluteString]) {
-            imageUrl = fileSystemMap[url.absoluteString];
+    return nil;
+}
+
+- (oneway NSURL *)_imagePathFromFileSystemWithIdentification:(id)identification targetDomain:(NSString *)domain {
+    if (identification && [fileSystemMap.allKeys containsObject:domain]) {
+        NSDictionary *domainMap = fileSystemMap[domain];
+        if ([domainMap.allKeys containsObject:identification]) {
+            return domainMap[identification];
         }
     }
-    
+    return nil;
+}
+
+- (void)_imageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
     NSError *error = [[NSError alloc] initWithDomain:@"domain" code:404 userInfo:nil];
-    if (imageUrl == nil) handler(nil, error);
-    else {
-        dispatch_barrier_async(fileSystemQueue, ^{
-            UIImage *image = [UIImage imageWithContentsOfFile:imageUrl.path];
-            
-            if (image) handler(image, nil);
-            else       handler(nil, error);
-        });
-    }
+    dispatch_barrier_async(fileSystemQueue, ^{
+        UIImage *image = [UIImage imageWithContentsOfFile:url.path];
+        
+        if (image) handler(image, nil);
+        else       handler(nil, error);
+    });
 }
 
 //TODO: Add NSError for MRIErrorType Enum
@@ -188,7 +176,41 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 #pragma mark - Accessors
 
 - (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-	//
+    //Check Memory
+    UIImage *image = [self _imageFromMemoryWithIdentification:identifer targetDomain:domain];
+    if (image) { handler(image, nil); return; }
+    
+    //Check File System
+    NSURL *url = [self _imagePathFromFileSystemWithIdentification:identifer targetDomain:domain];
+    if (url) { [self _imageFromURL:url completionHandler:handler]; return; }
+    
+    //Fetch From Remote
+    dispatch_barrier_async(networkQueue, ^{
+        NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
+            if (error) {
+                handler(nil, error);
+            }
+            else {
+                NSError *error = nil;
+                NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
+                
+                [[NSFileManager defaultManager] removeItemAtURL:toLocation error:nil];
+                if (![[NSFileManager defaultManager] moveItemAtURL:location toURL:toLocation error:&error]) {
+                    if (error) {
+                        handler(nil, error);
+                    }
+                    else {
+                        [self _updateFileSystemMapWithURL:toLocation forIdentifier:identifer inTargetDomain:domain];
+                        [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
+                            [self _updateMemoryMapWithImage:image forIdentifier:identifer inTargetDomain:domain];
+                            handler(image, error);
+                        }];
+                    }
+                }
+            }
+        }];
+        [task resume];
+    });
 }
 
 - (void)fetchImageWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
