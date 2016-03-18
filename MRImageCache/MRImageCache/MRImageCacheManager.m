@@ -63,13 +63,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Initializers
 
-+ (void)load {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-
-    });
-}
-
 - (instancetype)init {
     self = [super init];
     if (self) {
@@ -199,10 +192,29 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (void)fetchImageAssetWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-	// This assumes the image exists on disk, which is bad.
-	// Considering: a method that you can use to tell if the image is on disk
-	// However, if the user can check if an image is on disk, then there's no point in having fetch do all the work
 	[self fetchImageAssetWithRequest:nil uniqueIdentifier:identifier targetDomain:domain completionHandler:handler];
+}
+
+#pragma mark - Pass Through
+
+- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *, NSError *))handler {
+    [self addImage:image uniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
+}
+
+- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage *, NSError *))handler {
+    [self addImageFromURL:url targetDomain:nil completionHandler:handler];
+}
+
+- (void)removeImageWithIdentifier:(id)identifier completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+    [self removeImageWithIdentifier:identifier targetDomain:nil completionHandler:handler];
+}
+
+- (void)fetchImageAssetWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+    [self fetchImageAssetWithRequest:request uniqueIdentifier:identifer targetDomain:nil completionHandler:handler];
+}
+
+- (void)fetchImageAssetWithUniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *, NSError *))handler {
+    [self fetchImageAssetWithUniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
 }
 
 @end
