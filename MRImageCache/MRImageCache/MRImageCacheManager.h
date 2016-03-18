@@ -55,9 +55,15 @@
 
 //Remove Images
 
-- (void)removeImageWithIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nullable)domain completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
+- (void)removeImageWithIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nullable)domain completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;;
 
-- (void)removeImageWithIdentifier:(NSString *__nonnull)identifier completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
+- (void)removeImageWithIdentifier:(NSString *__nonnull)identifier completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;;
+
+//Move Images
+
+- (void)moveImageWithUniqueIdentifier:(NSString *__nonnull)identifier currentDomain:(NSString *__nullable)current targetDomain:(NSString *__nullable)target completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;
+
+- (void)moveAllImagesInDomain:(NSString *__nonnull)current toDomain:(NSString *__nonnull)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;;
 
 //Request Images
 /*

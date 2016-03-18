@@ -120,6 +120,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 #pragma mark - Helpers
 
 - (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
+    // TODO: Put this on write thread somehow
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
         if (error) {
@@ -192,8 +193,35 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	// UIImage does not have lazy loading, but can remove internal backing if memory warning occurs, then load lazily thereafter.
 }
 
-- (void)removeImageWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-	
+- (void)removeImageWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    
+}
+
+- (void)moveImageWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    if (![map.allKeys containsObject:current]) {
+        // Throw Exception for bad API usage
+    }
+    else if (![[map[current] allKeys] containsObject:identifier]) {
+        // Throw Exception for bad API usage
+    }
+    else {
+        NSURL *currentPath = [self _pathForIdentifier:identifier inTargetDomain:current];
+        NSURL *targetPath = [self _pathForIdentifier:identifier inTargetDomain:target];
+        
+        dispatch_barrier_async(fileSystemQueue, ^{
+            NSError *error = nil;
+            if ([self _moveFileFromPath:currentPath toDestination:targetPath withUniqueIdentifier:identifier inTargetDomain:target error:&error]) {
+                [self removeImageWithIdentifier:identifier targetDomain:current completionHandler:handler];
+            }
+            else {
+                handler(FALSE, error);
+            }
+        });
+    }
+}
+
+- (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    
 }
 
 #pragma mark - Accessors
