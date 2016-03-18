@@ -9,6 +9,8 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
+static NSString *const kImage = @"d";
+static NSString *const kPath = @"p";
 static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
 static const char *MRNetworkQueueTitle = "MRINetworkQueue";
 
@@ -28,6 +30,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	
 	NSMutableDictionary *fileSystemMap;
 	NSMutableDictionary *memoryMap;
+    NSMutableDictionary *map;
 }
 
 #pragma mark - Class Methods
@@ -71,6 +74,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 		
 		fileSystemMap = [NSMutableDictionary dictionary];
 		memoryMap     = [NSMutableDictionary dictionary];
+        map           = [NSMutableDictionary dictionary];
 		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 	}
@@ -115,54 +119,43 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Helpers
 
-- (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination error:(NSError **)error {
+- (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
+    [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
+    if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
+        if (error) {
+            return NO;
+        }
+        else {
+            map[domain][identifier] = @{kPath:destination};
+            return YES;
+        }
+    }
 	return NO;
-}
-
-- (void)_updateFileSystemMapWithURL:(NSURL *)location uniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
-	
-}
-
-- (void)_updateMemoryMapWithImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
-	
 }
 
 - (NSURL *)_pathForIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
 	return nil;
 }
 
-- (UIImage *)_imageFromMemoryWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain {
-	// TODO: push this into memory cache
-	
-	if (!identifier) {
-		// XXX: Should establish consistency of either throwing exception, or ignoring it.
-		// XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
-		// XXX: So our code should sanity check before calling to here.
-		return nil;
-	}
-	
-	if ([memoryMap.allKeys containsObject:domain]) {
-		NSDictionary *domainMap = memoryMap[domain];
-		if ([domainMap.allKeys containsObject:identifier]) {
-			return domainMap[identifier];
-		}
-	}
-	return nil;
-}
-
-- (NSURL *)_imagePathFromFileSystemWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain {
-	if (!identifier) {
-		// XXX: look at _imageFromMemoryWithIdentifier:targetDomain: for commentary
-		return nil;
-	}
-	
-	if ([fileSystemMap.allKeys containsObject:domain]) {
-		NSDictionary *domainMap = fileSystemMap[domain];
-		if ([domainMap.allKeys containsObject:identifier]) {
-			return domainMap[identifier];
-		}
-	}
-	return nil;
+- (NSDictionary *)_imageDictionaryForUniqueIdentifier:(id)identifier inTargetDomain:(NSString *)domain {
+    if (!identifier) {
+        // XXX: Should establish consistency of either throwing exception, or ignoring it.
+        // XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
+        // XXX: So our code should sanity check before calling to here.
+        return nil;
+    }
+    if (!domain) {
+        domain = [self defaultDomain];
+    }
+    
+    if ([map.allKeys containsObject:domain]) {
+        NSDictionary *domainDictionary = map[domain];
+        if ([domainDictionary.allKeys containsObject:identifier]) {
+            return domainDictionary[identifier];
+        }
+    }
+    
+    return nil;
 }
 
 - (void)_imageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
@@ -206,54 +199,37 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 #pragma mark - Accessors
 
 - (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-	//Check Memory
-	UIImage *image = [self _imageFromMemoryWithIdentifier:identifer targetDomain:domain];
-	if (image) { handler(image, nil); return; }
-	
-	//Check File System
-	NSURL *url = [self _imagePathFromFileSystemWithIdentifier:identifer targetDomain:domain];
-	if (url) { [self _imageFromURL:url completionHandler:handler]; return; }
-	
-	//Fetch From Remote
-	
-	NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-		if (error) {
-			handler(nil, error);
-		}
-		else {
-			NSError *error = nil;
-			NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
-			
-			if (![self _moveFileFromPath:location toDestination:toLocation error:&error]) {
-				handler(nil, error);
-			}
-			else {
-				// XXX: add to file system map
-				// XXX: add load from disk to queue and pass to handler
-				// [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
-				//		if (error) handler(nil, error);
-				//		else handler(image, nil);
-				// }];
-			
-			}
-			
-//                [[NSFileManager defaultManager] removeItemAtURL:toLocation error:nil];
-//                if (![[NSFileManager defaultManager] moveItemAtURL:location toURL:toLocation error:&error]) {
-//                    if (error) {
-//                        handler(nil, error);
-//                    }
-//                    else {
-//                        [self _updateFileSystemMapWithURL:toLocation uniqueIdentifier:identifer inTargetDomain:domain];
-//                        [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
-//                            [self _updateMemoryMapWithImage:image uniqueIdentifier:identifer inTargetDomain:domain];
-//                            handler(image, error);
-//                        }];
-//                    }
-//                }
-		}
-	}];
-	
-	[task resume];
+    NSDictionary *imageDictionary = [self _imageDictionaryForUniqueIdentifier:identifer inTargetDomain:domain];
+    
+    //Check Memory
+    if (imageDictionary[kImage]) {
+        handler(imageDictionary[kImage], nil);
+    }
+    //Check Filesystem
+    else if (imageDictionary[kPath]) {
+        [self _imageFromURL:imageDictionary[kPath] completionHandler:handler];
+    }
+    //Fetch From Remote
+    else {
+        NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
+            if (error) { handler(nil, error); return; }
+            
+            NSError *error2 = nil;
+            NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
+            
+            
+            if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
+                handler(nil, error2);
+            }
+            else {
+                [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
+                    if (error) handler(nil, error);
+                    else       handler(image, nil);
+                }];
+            }
+        }];
+        [task resume];
+    }
 }
 
 - (void)fetchImageWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
@@ -270,7 +246,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	[self addImageFromURL:url targetDomain:nil completionHandler:handler];
 }
 
-// XXX: What domain does this search? does it remove from ALL of them???
 - (void)removeImageWithIdentifier:(id)identifier completionHandler:(void (^)(UIImage * image, NSError * error))handler {
 	[self removeImageWithIdentifier:identifier targetDomain:nil completionHandler:handler];
 }
