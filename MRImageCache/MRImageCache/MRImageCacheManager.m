@@ -221,7 +221,15 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
-    
+    if (![map.allKeys containsObject:current]) {
+        // Throw Exception for bad API usage
+    }
+    else if(![map.allKeys containsObject:target]) {
+        // Rename Current Domnain
+    }
+    else {
+        // Merge Domnains into target, and remove current
+    }
 }
 
 #pragma mark - Accessors
@@ -238,7 +246,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         [self _imageFromURL:imageDictionary[kPath] completionHandler:handler];
     }
     //Fetch From Remote
-    else {
+    else if (request) {
         NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
             if (error) { handler(nil, error); return; }
             
@@ -274,7 +282,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	[self addImageFromURL:url targetDomain:nil completionHandler:handler];
 }
 
-- (void)removeImageWithIdentifier:(id)identifier completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+- (void)removeImageWithIdentifier:(id)identifier completionHandler:(void (^)(BOOL success, NSError * error))handler {
 	[self removeImageWithIdentifier:identifier targetDomain:nil completionHandler:handler];
 }
 
