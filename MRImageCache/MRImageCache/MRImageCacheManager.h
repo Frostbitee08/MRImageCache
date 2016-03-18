@@ -10,7 +10,11 @@
 
 @interface MRImageCacheManager : NSObject
 
-+ (instancetype)sharedInstance;
++ (nullable instancetype)alloc	__attribute__((unavailable("Refer to sharedInstance.")));
++ (nullable instancetype)new	__attribute__((unavailable("Refer to sharedInstance."))); // Improve these warnings.
+- (nullable instancetype)init	__attribute__((unavailable("Refer to sharedInstance.")));
+
++ (nonnull instancetype)sharedInstance;
 
 //Settings
 
@@ -22,15 +26,15 @@
 
 //Domains
 
-- (NSArray *)allDomains;
+- (nonnull NSArray *)allDomains;
 
-- (NSString *)defaultDomain;
+- (nonnull NSString *)defaultDomain;
 
-- (NSString *)shortTermCacheDomain;
+- (nonnull NSString *)shortTermCacheDomain;
 
-- (NSString *)longTermCacheDomain;
+- (nonnull NSString *)longTermCacheDomain;
 
-- (NSString *)workingCacheDomain; // Considering ruling this out.
+- (nonnull NSString *)workingCacheDomain; // Considering ruling this out.
 
 //Add Images
 /*
@@ -41,19 +45,19 @@
  In add methods, NSURL expects a filesystem URL
 */
 
-- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)addImage:(UIImage *__nonnull)image uniqueIdentifier:(NSString *__nullable)identifier targetDomain:(nullable NSString *)domain completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)addImage:(UIImage *__nonnull)image uniqueIdentifier:(NSString *__nullable)identifier completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)addImageFromURL:(NSURL *__nonnull)url targetDomain:(NSString *__nullable)domain completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)addImageFromURL:(NSURL *__nonnull)url completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
 //Remove Images
 
-- (void)removeImageWithIdentifier:(id)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)removeImageWithIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nullable)domain completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)removeImageWithIdentifier:(id)identifier completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)removeImageWithIdentifier:(NSString *__nonnull)identifier completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
 //Request Images
 /*
@@ -61,12 +65,12 @@
  Can pass anything as identifier. Perhaps even the URL you use to fetch it. It will be hashed.
 */
 
-- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler;
+- (void)fetchImageWithRequest:(NSURLRequest *__nullable)request uniqueIdentifier:(NSString *__nullable)identifer targetDomain:(NSString *__nullable)domain completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer completionHandler:(void (^)(UIImage *image, NSError *error))handler;
+- (void)fetchImageWithRequest:(NSURLRequest *__nullable)request uniqueIdentifier:(NSString *__nullable)identifer completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)fetchImageWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler;
+- (void)fetchImageWithUniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nullable)domain completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (void)fetchImageWithUniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *image, NSError *error))handler;
+- (void)fetchImageWithUniqueIdentifier:(NSString *__nonnull)identifier completionHandler:(void (^__nonnull)(UIImage *__nullable image, NSError *__nullable error))handler;
 
 @end
