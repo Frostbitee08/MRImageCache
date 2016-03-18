@@ -14,9 +14,23 @@
 
 //Settings
 
-+ (void)setIdleRetainRange:(NSTimeInterval)range;
+// these aren't thread safe right now. –-
 
-+ (void)setMaximumDatabaseSize:(NSInteger)kilobytes;
+- (void)setIdleRetainRange:(NSTimeInterval)range;
+
+- (void)setMaximumDatabaseSize:(NSInteger)kilobytes;
+
+// ––
+
+- (NSArray *)allDomains;
+
+- (NSString *)defaultDomain;
+
+- (NSString *)shortTermCacheDomain;
+
+- (NSString *)longTermCacheDomain;
+
+- (NSString *)workingCacheDomain; // Considering ruling this out.
 
 //Add Images
 /*
@@ -25,29 +39,24 @@
  please use the fetch methods.
 */
 
-- (void)addImage:(UIImage *)image withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler;
-
-- (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
-
-- (void)addImageWithRequest:(NSURLRequest *)request withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+// URL being, file system URL.
 
 //Remove Images
+// No real way to determine what image this is...
+//- (void)removeImage:(UIImage *)image completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
-- (void)removeImage:(UIImage *)image completionHandler:(void (^)(UIImage * image, NSError * error))handler;
-
-- (void)removeImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)removeImageWithIdentifier:(id)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler;
 
 //Request Images
 /*
  Fetch methods check to see if an image exists before adding and returning.
 */
 
-- (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler;
+- (void)fetchImageAssetWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler;
 
-- (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler;
-
-- (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromRequest:(NSURLRequest *)request completionHandler:(void (^)(UIImage * image, NSError * error))handler;
-
+- (void)fetchImageAssetWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler;
+// Can pass anything as identifier. Perhaps even the URL you use to fetch it. It will be hashed.
 @end

@@ -9,18 +9,22 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
-static const char *fileSystemQueueTitle = "fs";
-static const char *networkQueueTitle = "nw";
-static const float networkRequesTimeout = 30.0f;
+static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
+static const char *MRNetworkQueueTitle = "MRINetworkQueue";
 
-static NSInteger maximumDataBaseSize;
-static NSTimeInterval idleRange;
-static BOOL useMaximumDataBaseSize;
-static BOOL useIdleRange;
+static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
+
 
 @implementation MRImageCacheManager {
+	// probably want our own NSURLSession
     dispatch_queue_t fileSystemQueue;
     dispatch_queue_t networkQueue;
+	
+	BOOL useIdleRange;
+	NSTimeInterval idleRange;
+
+	BOOL useMaximumDatabaseSize;
+	NSInteger maximumDatabaseSize;
     
     NSMutableDictionary *fileSystemMap;
     NSMutableDictionary *memoryMap;
@@ -37,8 +41,8 @@ static BOOL useIdleRange;
     return _instance;
 }
 
-+ (void)setIdleRetainRange:(NSTimeInterval)range {
-    if (range <= 0) {
+- (void)setIdleRetainRange:(NSTimeInterval)range {
+	if (range <= 0) {
         useIdleRange = false;
     }
     else {
@@ -47,12 +51,12 @@ static BOOL useIdleRange;
     }
 }
 
-+ (void)setMaximumDatabaseSize:(NSInteger)kilobytes {
+- (void)setMaximumDatabaseSize:(NSInteger)kilobytes {
     if (kilobytes <= 0) {
-        useMaximumDataBaseSize = false;
+		useMaximumDatabaseSize = NO;
     }
     else {
-        maximumDataBaseSize = kilobytes;
+        useMaximumDatabaseSize = kilobytes;
         //TODO: Update Database with new maximum size
     }
 }
@@ -62,22 +66,20 @@ static BOOL useIdleRange;
 + (void)load {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        useMaximumDataBaseSize = false;
-        useIdleRange = false;
+
     });
 }
 
 - (instancetype)init {
     self = [super init];
     if (self) {
-        fileSystemQueue = dispatch_queue_create(fileSystemQueueTitle, 0);
-        networkQueue = dispatch_queue_create(networkQueueTitle, 0);
+        fileSystemQueue = dispatch_queue_create(MRFileSystemQueueTitle, 0);
+        networkQueue = dispatch_queue_create(MRNetworkQueueTitle, 0);
         
         fileSystemMap = [NSMutableDictionary dictionary];
         memoryMap     = [NSMutableDictionary dictionary];
 		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
-		
     }
     return self;
 }
@@ -87,9 +89,41 @@ static BOOL useIdleRange;
 	// Cleanup.
 }
 
+- (NSArray *)allDomains {
+	// on +load/+initialize, load disk save into mem
+	// return vals here
+	NSArray *defaultDomains = @[
+								[self shortTermCacheDomain],
+								[self longTermCacheDomain],
+								[self workingCacheDomain]
+								];
+	
+	// add user defined domains here.
+	
+	return defaultDomains;
+}
+
+- (NSString *)defaultDomain {
+	// defaultDomain should be shortTerm, longTerm, or working. Not sure which yet though.
+	return [[NSBundle mainBundle] bundleIdentifier]; // should append mricXXXXXX
+}
+
+- (NSString *)shortTermCacheDomain {
+	return [[NSBundle mainBundle] bundleIdentifier]; // should append mricShortTermXXXXXX
+}
+
+- (NSString *)longTermCacheDomain {
+	return [[NSBundle mainBundle] bundleIdentifier]; // should append mricLongTermXXXXXX
+}
+
+- (NSString *)workingCacheDomain {
+	return [[NSBundle mainBundle] bundleIdentifier]; // should append mircWorkingXXXXXX
+}
+
 #pragma mark - Helpers
 
-- (oneway void)_changeImageIdentifierFrom:(id)from to:(id)to {
+- (void)_changeImageIdentifierFrom:(id)from to:(id)to {
+	// not thread safe. 
     UIImage *image = memoryMap[from];
     [memoryMap removeObjectForKey:from];
     [memoryMap setObject:image forKey:to];
@@ -146,72 +180,29 @@ static BOOL useIdleRange;
 
 #pragma mark - Modifiers
 
-- (void)addImage:(UIImage *)image withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    dispatch_barrier_async(fileSystemQueue, ^{
-        
-    });
+- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+	
 }
 
-- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:networkRequesTimeout];
-    [self addImageWithRequest:request withIdentification:url.absoluteString completionHandler:handler];
+- (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+	
 }
 
-- (void)addImageFromURL:(NSURL *)url withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url cachePolicy:NSURLRequestUseProtocolCachePolicy timeoutInterval:networkRequesTimeout];
-    [self addImageWithRequest:request withIdentification:identification completionHandler:handler];
-}
-
-- (void)addImageWithRequest:(NSURLRequest *)request withIdentification:(NSString *)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    dispatch_barrier_async(networkQueue, ^{
-        NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-            if (error) {
-                handler(nil, error);
-            }
-            else {
-                UIImage *image = [UIImage imageWithContentsOfFile:location.path];
-                [self addImage:image withIdentification:identification completionHandler:handler];
-            }
-        }];
-        
-        [task resume];
-    });
-}
-
-- (void)removeImage:(UIImage *)image completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    
-}
-
-- (void)removeImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    
+- (void)removeImageWithIdentifier:(id)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+	
 }
 
 #pragma mark - Accessors
 
-- (void)fetchImageWithIdentification:(id)identification completionHandler:(void (^)(UIImage *, NSError *))handler {
-    UIImage *image = [self _imageFromMemoryWithIdentification:identification andUrl:nil];
-    
-    if (image) handler(image, nil);
-    else       [self _imageFromFilesystemWithIdentification:identification andUrl:nil completionHandler:handler];
+- (void)fetchImageAssetWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+	//
 }
 
-- (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    UIImage *image = [self _imageFromMemoryWithIdentification:identification andUrl:url];
-    
-    if (image) handler(image, nil);
-    else  {
-        [self _imageFromFilesystemWithIdentification:identification andUrl:nil completionHandler:^(UIImage *image, NSError *error) {
-            if (image) handler(image, error);
-            else       [self addImageFromURL:url withIdentification:identification completionHandler:handler];
-        }];
-    }
-}
-
-- (void)fetchImageWithIdentification:(id)identification cacheIfNecessaryFromRequest:(NSURLRequest *)request completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-    [self fetchImageWithIdentification:identification completionHandler:^(UIImage *image, NSError *error) {
-        if (image) handler(image, error);
-        else       [self addImageWithRequest:request withIdentification:identification completionHandler:handler];
-    }];
+- (void)fetchImageAssetWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+	// This assumes the image exists on disk, which is bad.
+	// Considering: a method that you can use to tell if the image is on disk
+	// However, if the user can check if an image is on disk, then there's no point in having fetch do all the work
+	[self fetchImageAssetWithRequest:nil uniqueIdentifier:identifier targetDomain:domain completionHandler:handler];
 }
 
 @end
