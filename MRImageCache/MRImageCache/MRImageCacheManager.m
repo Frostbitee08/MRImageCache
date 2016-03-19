@@ -11,10 +11,27 @@
 
 static NSString *const MRMapImageKey = @"d";
 static NSString *const MRMapPathKey = @"p";
+static NSString *const MRMapItemsKey = @"i";
+static NSString *const MRMapExtensionKey = @"k";
 static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
 static const char *MRNetworkQueueTitle = "MRINetworkQueue";
 
 static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
+
+/*
+	com.mri.domainName -> {
+							directoryName (MRMapPathKey) -> "com.mri.domainNameXXXXXX"
+							items -> { // Can possibly be removed, no collission with dictionaryName possible
+								da39a3ee5e6b4b0d3255bfef95601890afd80709 -> {
+									MRIMapImageKey = <image> | <null>
+									extension = "jpg"
+								}
+
+							}
+	}
+ 
+ 
+ */
 
 
 @implementation MRImageCacheManager {
@@ -28,7 +45,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	BOOL useMaximumDatabaseSize;
 	NSInteger maximumDatabaseSize;
 	
-    NSMutableDictionary *map;
+    NSMutableDictionary<NSString *, NSDictionary<NSString *, id> *> *map;
 }
 
 #pragma mark - Class Methods
@@ -101,6 +118,25 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
 }
 
+- (NSURL *)_baseDirectoryForDomain:(NSString *)domain {
+	NSURL *targetBase = nil;
+	
+	NSSearchPathDirectory searchPath = NSDocumentDirectory;
+	
+	if ([domain isEqualToString:[self shortTermCacheDomain]]) {
+		
+		searchPath = NSCachesDirectory;
+	}
+	
+	NSArray *workingDirectories = NSSearchPathForDirectoriesInDomains(searchPath, NSUserDomainMask, YES);
+	
+	if ([workingDirectories count] > 0) {
+		targetBase = [NSURL fileURLWithPath:[workingDirectories objectAtIndex:0]];
+	}
+	
+	return targetBase;
+}
+
 #pragma mark - Helpers
 
 - (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
@@ -110,7 +146,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
             return NO;
         }
         else {
-            map[domain][identifier] = @{MRMapPathKey : destination};
+            map[domain][MRMapImageKey][identifier] = @{MRMapPathKey : destination};
             return YES;
         }
     }
@@ -118,7 +154,21 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSURL *)_pathForIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
-	return nil;
+	NSURL *base = [self _baseDirectoryForDomain:domain];
+	
+	NSString *directoryName = map[domain][MRMapPathKey];
+	
+	NSURL *fullDirectory = [base URLByAppendingPathComponent:directoryName];
+	
+	NSURL *contextItem = [fullDirectory URLByAppendingPathComponent:identifier];
+	
+	NSString *extension = map[domain][MRMapItemsKey][identifier][MRMapExtensionKey];
+	//						  ^       ^              ^           ^
+	// NOT ONE, NOT TWO, NOT THREE, BUT FOUR SUBSCRIPTS
+	
+	NSURL *directPath = [contextItem URLByAppendingPathExtension:extension];
+	
+	return directPath;
 }
 
 - (NSDictionary *)_imageDictionaryForUniqueIdentifier:(id)identifier inTargetDomain:(NSString *)domain {
