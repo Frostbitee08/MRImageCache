@@ -28,8 +28,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	BOOL useMaximumDatabaseSize;
 	NSInteger maximumDatabaseSize;
 	
-	NSMutableDictionary *fileSystemMap;
-	NSMutableDictionary *memoryMap;
     NSMutableDictionary *map;
 }
 
@@ -69,12 +67,9 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 - (instancetype)initPrivate { // forsaken `initializers` must be prefixed `init` :(
 	self = [super init];
 	if (self) {
-		fileSystemQueue = dispatch_queue_create(MRFileSystemQueueTitle, 0);
-		networkQueue = dispatch_queue_create(MRNetworkQueueTitle, 0);
-		
-		fileSystemMap = [NSMutableDictionary dictionary];
-		memoryMap     = [NSMutableDictionary dictionary];
-		map           = [NSMutableDictionary dictionary];
+        fileSystemQueue = dispatch_queue_create(MRFileSystemQueueTitle, 0);
+        networkQueue    = dispatch_queue_create(MRNetworkQueueTitle, 0);
+        map             = [NSMutableDictionary dictionary];
 		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 	}
@@ -87,34 +82,23 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSArray *)allDomains {
-	// XXX: on +load/+initialize, load disk save into mem
-	// XXX: return vals here
-	NSArray *defaultDomains = @[
-								[self shortTermCacheDomain],
-								[self longTermCacheDomain],
-								[self workingCacheDomain]
-								];
-	
-	// add user defined domains here.
-	
-	return defaultDomains;
+    return map.allKeys;
 }
 
 - (NSString *)defaultDomain {
-	// XXX: defaultDomain should be shortTerm, longTerm, or working. Not sure which yet though.
-	return [[NSBundle mainBundle] bundleIdentifier]; // should append mricXXXXXX
+	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mric"];
 }
 
 - (NSString *)shortTermCacheDomain {
-	return [[NSBundle mainBundle] bundleIdentifier]; // should append mricShortTermXXXXXX
+	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricShortTerm"];
 }
 
 - (NSString *)longTermCacheDomain {
-	return [[NSBundle mainBundle] bundleIdentifier]; // should append mricLongTermXXXXXX
+    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricLongTerm"];
 }
 
 - (NSString *)workingCacheDomain {
-	return [[NSBundle mainBundle] bundleIdentifier]; // should append mircWorkingXXXXXX
+	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
 }
 
 #pragma mark - Helpers
