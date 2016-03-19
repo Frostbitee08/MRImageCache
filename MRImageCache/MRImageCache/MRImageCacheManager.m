@@ -9,29 +9,14 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
-static NSString *const MRMapImageKey = @"d";
-static NSString *const MRMapPathKey = @"p";
-static NSString *const MRMapItemsKey = @"i";
-static NSString *const MRMapExtensionKey = @"k";
+static NSString *const MRMapImageKey      = @"d";
+static NSString *const MRMapPathKey       = @"p";
+static NSString *const MRMapItemsKey      = @"i";
+static NSString *const MRMapSizeKey       = @"s";
+static NSString *const MRMapLastAccessKey = @"a";
 static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
-static const char *MRNetworkQueueTitle = "MRINetworkQueue";
-
+static const char *MRNetworkQueueTitle    = "MRINetworkQueue";
 static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
-
-/*
-	com.mri.domainName -> {
-							directoryName (MRMapPathKey) -> "com.mri.domainNameXXXXXX"
-							items -> { // Can possibly be removed, no collission with dictionaryName possible
-								da39a3ee5e6b4b0d3255bfef95601890afd80709 -> {
-									MRIMapImageKey = <image> | <null>
-									extension = "jpg"
-								}
-
-							}
-	}
- 
- 
- */
 
 
 @implementation MRImageCacheManager {
@@ -98,6 +83,8 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	// Cleanup.
 }
 
+#pragma mark - Domain Accessors
+
 - (NSArray *)allDomains {
     return map.allKeys;
 }
@@ -118,37 +105,37 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
 }
 
-- (NSURL *)_baseDirectoryForDomain:(NSString *)domain {
-	NSURL *targetBase = nil;
-	
-	NSSearchPathDirectory searchPath = NSDocumentDirectory;
-	
-	if ([domain isEqualToString:[self shortTermCacheDomain]]) {
-		
-		searchPath = NSCachesDirectory;
-	}
-	
-	NSArray *workingDirectories = NSSearchPathForDirectoriesInDomains(searchPath, NSUserDomainMask, YES);
-	
-	if ([workingDirectories count] > 0) {
-		targetBase = [NSURL fileURLWithPath:[workingDirectories objectAtIndex:0]];
-	}
-	
-	return targetBase;
-}
-
 #pragma mark - Helpers
 
-- (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
+- (NSURL *)_baseDirectoryForDomain:(NSString *)domain {
+    NSURL *targetBase = nil;
+    
+    NSSearchPathDirectory searchPath = NSDocumentDirectory;
+    
+    if ([domain isEqualToString:[self shortTermCacheDomain]]) {
+        
+        searchPath = NSCachesDirectory;
+    }
+    
+    NSArray *workingDirectories = NSSearchPathForDirectoriesInDomains(searchPath, NSUserDomainMask, YES);
+    
+    if ([workingDirectories count] > 0) {
+        targetBase = [NSURL fileURLWithPath:[workingDirectories objectAtIndex:0]];
+    }
+    
+    return targetBase;
+}
+
+
+- (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)
+    //TODO: No longer takes care of map, need to address this in the previous functions that used this.
+    identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
         if (error) {
             return NO;
         }
-        else {
-            map[domain][MRMapImageKey][identifier] = @{MRMapPathKey : destination};
-            return YES;
-        }
+        return YES;
     }
 	return NO;
 }
@@ -160,13 +147,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	
 	NSURL *fullDirectory = [base URLByAppendingPathComponent:directoryName];
 	
-	NSURL *contextItem = [fullDirectory URLByAppendingPathComponent:identifier];
-	
-	NSString *extension = map[domain][MRMapItemsKey][identifier][MRMapExtensionKey];
-	//						  ^       ^              ^           ^
-	// NOT ONE, NOT TWO, NOT THREE, BUT FOUR SUBSCRIPTS
-	
-	NSURL *directPath = [contextItem URLByAppendingPathExtension:extension];
+	NSURL *directPath = [fullDirectory URLByAppendingPathComponent:identifier];
 	
 	return directPath;
 }
@@ -183,7 +164,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     }
     
     if ([map.allKeys containsObject:domain]) {
-        NSDictionary *domainDictionary = map[domain];
+        NSDictionary *domainDictionary = map[domain][MRMapItemsKey];
         if ([domainDictionary.allKeys containsObject:identifier]) {
             return domainDictionary[identifier];
         }
@@ -231,6 +212,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (void)moveImageWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    //TODO: Update for new map structure
     if (![map.allKeys containsObject:current]) {
         // Throw Exception for bad API usage
     }
@@ -254,6 +236,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    //TODO: Update for new map structure
     if (![map.allKeys containsObject:current]) {
         // Throw Exception for bad API usage
     }
@@ -269,6 +252,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 - (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
     NSDictionary *imageDictionary = [self _imageDictionaryForUniqueIdentifier:identifer inTargetDomain:domain];
+    //TODO: Update for new map structure
     
     //Check Memory
     if (imageDictionary[MRMapImageKey]) {
