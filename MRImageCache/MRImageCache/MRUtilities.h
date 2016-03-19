@@ -14,6 +14,6 @@
 NSString *MRMD5HashFromString(NSString *string);
 NSString *MRMD5HashFromFile(NSURL *filePath);
 NSString *MRRFC2616DTimestampFromDate(NSDate *date);
-
+NSString *MRSHA1HashFromString(NSString *string);
 #endif
 

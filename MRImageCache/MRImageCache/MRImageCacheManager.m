@@ -9,8 +9,8 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
-static NSString *const kImage = @"d";
-static NSString *const kPath = @"p";
+static NSString *const MRMapImageKey = @"d";
+static NSString *const MRMapPathKey = @"p";
 static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
 static const char *MRNetworkQueueTitle = "MRINetworkQueue";
 
@@ -74,7 +74,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 		
 		fileSystemMap = [NSMutableDictionary dictionary];
 		memoryMap     = [NSMutableDictionary dictionary];
-        map           = [NSMutableDictionary dictionary];
+		map           = [NSMutableDictionary dictionary];
 		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
 	}
@@ -126,7 +126,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
             return NO;
         }
         else {
-            map[domain][identifier] = @{kPath:destination};
+            map[domain][identifier] = @{MRMapPathKey : destination};
             return YES;
         }
     }
@@ -223,7 +223,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     if (![map.allKeys containsObject:current]) {
         // Throw Exception for bad API usage
     }
-    else if(![map.allKeys containsObject:target]) {
+    else if (![map.allKeys containsObject:target]) {
         // Rename Current Domnain
     }
     else {
@@ -237,12 +237,12 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     NSDictionary *imageDictionary = [self _imageDictionaryForUniqueIdentifier:identifer inTargetDomain:domain];
     
     //Check Memory
-    if (imageDictionary[kImage]) {
-        handler(imageDictionary[kImage], nil);
+    if (imageDictionary[MRMapImageKey]) {
+        handler(imageDictionary[MRMapImageKey], nil);
     }
     //Check Filesystem
-    else if (imageDictionary[kPath]) {
-        [self _imageFromURL:imageDictionary[kPath] completionHandler:handler];
+    else if (imageDictionary[MRMapPathKey]) {
+        [self _imageFromURL:imageDictionary[MRMapPathKey] completionHandler:handler];
     }
     //Fetch From Remote
     else if (request) {
@@ -257,10 +257,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
                     handler(nil, error2);
                 }
                 else {
-                    [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
-                        if (error) handler(nil, error);
-                        else       handler(image, nil);
-                    }];
+					[self _imageFromURL:toLocation completionHandler:handler];
                 }
             });
         }];

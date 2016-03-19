@@ -12,7 +12,7 @@
 		8474033C1C99E87C001FEC2B /* MRImageCacheTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474033B1C99E87C001FEC2B /* MRImageCacheTests.m */; };
 		847403481C99EE31001FEC2B /* MRImageCacheManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 847403461C99EE31001FEC2B /* MRImageCacheManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		847403491C99EE31001FEC2B /* MRImageCacheManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 847403471C99EE31001FEC2B /* MRImageCacheManager.m */; };
-		8474034D1C99F632001FEC2B /* MRUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 8474034B1C99F632001FEC2B /* MRUtilities.h */; };
+		8474034D1C99F632001FEC2B /* MRUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 8474034B1C99F632001FEC2B /* MRUtilities.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8474034E1C99F632001FEC2B /* MRUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 8474034C1C99F632001FEC2B /* MRUtilities.m */; };
 /* End PBXBuildFile section */
 

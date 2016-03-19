@@ -27,6 +27,8 @@
 
 - (void)testExample {
 	
+	[self testHelpers];
+	
 	[self testAccessors];
 	
 	[self testModifiers];
@@ -35,6 +37,10 @@
 	
     // This is an example of a functional test case.
     // Use XCTAssert and related functions to verify your tests produce the correct results.
+}
+
+- (void)testHelpers {
+	XCTAssert([MRSHA1HashFromString(@"") isEqualToString:@"da39a3ee5e6b4b0d3255bfef95601890afd80709"], @"Bad hash");
 }
 
 - (void)testAccessors {
@@ -59,7 +65,7 @@
 		
 	}];
 	
-	[cacher removeImageWithIdentifier:[NSString new] completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
+	[cacher removeImageWithIdentifier:[NSString new] completionHandler:^(BOOL success, NSError * _Nullable error) {
 		
 	}];
 	

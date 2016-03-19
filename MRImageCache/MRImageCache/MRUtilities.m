@@ -14,6 +14,19 @@ NSString *MRMD5HashFromString(NSString *string) {
     return nil;
 }
 
+NSString *MRSHA1HashFromString(NSString *string) {
+	unsigned char hashDigest[CC_SHA1_DIGEST_LENGTH];
+	
+	NSData *bytes = [string dataUsingEncoding:NSUTF8StringEncoding];
+	
+	if (!CC_SHA1([bytes bytes], (CC_LONG)[bytes length], hashDigest)) {
+		// Issue calculating SHA1.
+		return nil;
+	}
+	
+	return [[NSString alloc] initWithBytes:hashDigest length:CC_SHA1_DIGEST_LENGTH encoding:NSUTF8StringEncoding];
+}
+
 NSString *MRMD5HashFromFile(NSURL *filePath) {
     return nil;
 }
