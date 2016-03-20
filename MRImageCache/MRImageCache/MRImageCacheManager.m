@@ -18,7 +18,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 
 @implementation MRImageCacheManager {
-	// probably want our own NSURLSession
 	dispatch_queue_t fileSystemQueue;
 	dispatch_queue_t networkQueue;
 	
@@ -103,6 +102,8 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Helpers
 
+//TODO: Assert Identifier for all functions
+
 - (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
@@ -110,7 +111,11 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
             return NO;
         }
         else {
-            map[domain][identifier] = @{MRMapPathKey : destination};
+            if (![map.allKeys containsObject:domain]) {
+                map[domain] = [NSMutableDictionary  dictionary];
+            }
+            
+            map[domain][identifier] = [@{MRMapPathKey : destination} mutableCopy];
             return YES;
         }
     }
@@ -118,6 +123,25 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSURL *)_pathForIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
+    if (!identifier) {
+        // XXX: Should establish consistency of either throwing exception, or ignoring it.
+        // XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
+        // XXX: So our code should sanity check before calling to here.
+        return nil;
+    }
+    if (!domain) {
+        domain = [self defaultDomain];
+    }
+    
+    NSArray *scope = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    if (scope.count) {
+        NSURL *base = [scope objectAtIndex:0];
+        base = [base URLByAppendingPathComponent:domain isDirectory:YES];
+        base = [base URLByAppendingPathComponent:identifier];
+        
+        return base;
+    }
+    
 	return nil;
 }
 
@@ -161,31 +185,65 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Modifiers
 
-- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-	
+- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    dispatch_barrier_async(fileSystemQueue, ^{
+        NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+        
+        [[NSFileManager defaultManager] removeItemAtURL:target error:nil];
+        [[NSFileManager defaultManager] createFileAtPath:target.path contents:UIImagePNGRepresentation(image) attributes:nil];
+        
+        if (![map.allKeys containsObject:domain]) {
+            map[domain] = [NSMutableDictionary  dictionary];
+        }
+        
+        map[domain][identifier] = [@{MRMapPathKey:target} mutableCopy];
+        
+        handler(YES, nil);
+    });
 }
 
 - (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
 	if (![url isFileReferenceURL]) {
-		// TODO: throw exception, or do something. ;P
-		// or pass to fetch.. ?
+		// TODO: throw exception, or do something.
 		return;
 	}
-	// TODO: read image into memory then call addImage:uniqueIdentifier:targetDomain:completionHandler:?
-	// or just do separate behavior to save from loading image into memory.
-	// UIImage does not have lazy loading, but can remove internal backing if memory warning occurs, then load lazily thereafter.
+    
+    [self _imageFromURL:url completionHandler:^(UIImage *image, NSError *error) {
+        NSString *identifier = url.lastPathComponent;
+        __weak typeof(NSMutableDictionary) *weakMap = map;
+        [self addImage:image uniqueIdentifier:identifier targetDomain:domain completionHandler:^(BOOL success, NSError *error) {
+            if (success) {
+                weakMap[domain][identifier][MRMapImageKey] = image;
+                handler(image, error);
+            }
+            else {
+                handler(nil, error);
+            }
+        }];
+    }];
 }
 
 - (void)removeImageWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
-    
+    dispatch_barrier_async(fileSystemQueue, ^{
+        NSError *error = nil;
+        NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+        
+        [[NSFileManager defaultManager] removeItemAtURL:target error:&error];
+        if (error) {
+            handler(NO, error);
+        }
+        else {
+            handler(YES, error);
+        }
+    });
 }
 
 - (void)moveImageWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target completionHandler:(void (^)(BOOL success, NSError * error))handler {
     if (![map.allKeys containsObject:current]) {
-        // Throw Exception for bad API usage
+        // TODO: Throw Exception for bad API usage
     }
     else if (![[map[current] allKeys] containsObject:identifier]) {
-        // Throw Exception for bad API usage
+        // TODO: Throw Exception for bad API usage
     }
     else {
         NSURL *currentPath = [self _pathForIdentifier:identifier inTargetDomain:current];
@@ -205,13 +263,13 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 - (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
     if (![map.allKeys containsObject:current]) {
-        // Throw Exception for bad API usage
+        // TODO: Throw Exception for bad API usage
     }
     else if (![map.allKeys containsObject:target]) {
-        // Rename Current Domnain
+        // TOOD: Rename Current Domnain
     }
     else {
-        // Merge Domnains into target, and remove current
+        // TODO: Merge Domnains into target, and remove current
     }
 }
 
@@ -241,7 +299,10 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
                     handler(nil, error2);
                 }
                 else {
-					[self _imageFromURL:toLocation completionHandler:handler];
+                    [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
+                        if (image) map[domain][identifer][MRMapImageKey] = image;
+                        handler(image, error);
+                    }];
                 }
             });
         }];
@@ -255,7 +316,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Conveniences (Pass Through)
 
-- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *, NSError *))handler {
+- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(BOOL success, NSError * error))handler {
 	[self addImage:image uniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
 }
 
