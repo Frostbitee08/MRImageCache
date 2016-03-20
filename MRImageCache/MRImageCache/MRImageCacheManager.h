@@ -8,6 +8,15 @@
 
 #import <UIKit/UIKit.h>
 
+extern NSString *__nonnull const MRIErrorDomain;
+
+typedef NS_ENUM(NSInteger, MRIErrorType) {
+	MRIErrorTypeFileMoveFailure = 0,
+	MRIErrorTypeFileRemoveFailure,
+	MRIErrorTypeFileNotFound,
+	// This is incomplete.
+};
+
 @interface MRImageCacheManager : NSObject
 
 + (nullable instancetype)alloc	__attribute__((unavailable("Refer to sharedInstance.")));

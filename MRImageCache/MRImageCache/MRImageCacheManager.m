@@ -81,11 +81,30 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 - (void)memoryWarningReceived {
 	// Cleanup.
+	// Should create method used for removing images from map before saving
+	// And use that here, and overwrite current dictionary.
+	// Should be careful about memory consumption though with ARC.
+	// (ie, remove from existing map, not create new map without it)
 }
 
 #pragma mark - Domain Accessors
 
 - (NSArray *)allDomains {
+	if ([[map allKeys] count] < 4) {
+		if (!map[[self defaultDomain]]) {
+			// create domain
+		}
+		if (!map[[self shortTermCacheDomain]]) {
+			// create domain
+		}
+		if (!map[[self longTermCacheDomain]]) {
+			// create domain
+		}
+		if (!map[[self workingCacheDomain]]) {
+			// create domain
+		}
+	}
+	 
     return map.allKeys;
 }
 
@@ -103,6 +122,10 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 - (NSString *)workingCacheDomain {
 	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
+}
+
+- (void)_createDomainNamed:(NSString *)domainName completionHandler:(void (^)(NSString *dirName, NSError *error))handler {
+	// Not sure if this should be immediate, or dumped in the fs queue.
 }
 
 #pragma mark - Helpers
@@ -127,9 +150,10 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 
-- (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)
+- (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
+	
     //TODO: No longer takes care of map, need to address this in the previous functions that used this.
-    identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
+
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
         if (error) {
@@ -141,6 +165,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSURL *)_pathForIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
+	
 	NSURL *base = [self _baseDirectoryForDomain:domain];
 	
 	NSString *directoryName = map[domain][MRMapPathKey];
@@ -159,16 +184,24 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         // XXX: So our code should sanity check before calling to here.
         return nil;
     }
+	
     if (!domain) {
         domain = [self defaultDomain];
     }
-    
-    if ([map.allKeys containsObject:domain]) {
-        NSDictionary *domainDictionary = map[domain][MRMapItemsKey];
-        if ([domainDictionary.allKeys containsObject:identifier]) {
-            return domainDictionary[identifier];
-        }
+	
+	NSDictionary *domainDictionary = map[domain][MRMapItemsKey];
+	
+    if (domainDictionary) {
+		if (domainDictionary[identifier]) {
+			return domainDictionary[identifier];
+		}
+		else {
+			
+		}
     }
+	else {
+		
+	}
     
     return nil;
 }
@@ -180,7 +213,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 		
 		if (image) handler(image, nil);
 		else {
-			NSError *error = [[NSError alloc] initWithDomain:@"domain" code:404 userInfo:nil];
+			NSError *error = [[NSError alloc] initWithDomain:MRIErrorDomain code:MRIErrorTypeFileNotFound userInfo:nil]; // dictionary is helpful.
 			handler(nil, error);
 		}
 	});
@@ -213,7 +246,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 - (void)moveImageWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target completionHandler:(void (^)(BOOL success, NSError * error))handler {
     //TODO: Update for new map structure
-    if (![map.allKeys containsObject:current]) {
+    if (!map[current]) {
         // Throw Exception for bad API usage
     }
     else if (![[map[current] allKeys] containsObject:identifier]) {
@@ -235,7 +268,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     }
 }
 
-- (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
+- (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError *error))handler {
     //TODO: Update for new map structure
     if (![map.allKeys containsObject:current]) {
         // Throw Exception for bad API usage
@@ -251,36 +284,40 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 #pragma mark - Accessors
 
 - (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+	
     NSDictionary *imageDictionary = [self _imageDictionaryForUniqueIdentifier:identifer inTargetDomain:domain];
     //TODO: Update for new map structure
-    
-    //Check Memory
-    if (imageDictionary[MRMapImageKey]) {
-        handler(imageDictionary[MRMapImageKey], nil);
-    }
-    //Check Filesystem
-    else if (imageDictionary[MRMapPathKey]) {
-        [self _imageFromURL:imageDictionary[MRMapPathKey] completionHandler:handler];
-    }
-    //Fetch From Remote
-    else if (request) {
-        NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
-            if (error) { handler(nil, error); return; }
-            
-            dispatch_barrier_async(fileSystemQueue, ^{
-                NSError *error2 = nil;
-                NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
-                
-                if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
-                    handler(nil, error2);
-                }
-                else {
+	
+	if (imageDictionary) {
+		if (imageDictionary[MRMapImageKey]) {
+			handler(imageDictionary[MRMapImageKey], nil);
+		}
+		else {
+			// it exists on disk. Push fetch to fs queue
+		}
+	}
+	else if (request) {
+		NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
+			if (error) { handler(nil, error); return; }
+			
+			dispatch_barrier_async(fileSystemQueue, ^{
+				NSError *error2 = nil;
+				NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
+				
+				if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
+					handler(nil, error2);
+				}
+				else {
 					[self _imageFromURL:toLocation completionHandler:handler];
-                }
-            });
-        }];
-        [task resume];
-    }
+				}
+			});
+		}];
+		[task resume];
+
+	}
+	else {
+		// Exhausted all options. Throw exception here.
+	}
 }
 
 - (void)fetchImageWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
@@ -310,3 +347,5 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 @end
+
+NSString *const MRIErrorDomain = @"MRIErrorDomain";
