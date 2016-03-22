@@ -11,6 +11,7 @@
 
 static NSString *const MRMapImageKey = @"d";
 static NSString *const MRMapPathKey = @"p";
+static NSString *const MRBasePathKey = @"MRI";
 static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
 static const char *MRNetworkQueueTitle = "MRINetworkQueue";
 
@@ -63,7 +64,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 #pragma mark - Initializers
 
-- (instancetype)initPrivate { // forsaken `initializers` must be prefixed `init` :(
+- (instancetype)initPrivate {
 	self = [super init];
 	if (self) {
         fileSystemQueue = dispatch_queue_create(MRFileSystemQueueTitle, 0);
@@ -71,10 +72,24 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         map             = [NSMutableDictionary dictionary];
 		
 		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+        [self populateMap];
 	}
 	return self;
 }
 
+- (void)populateMap {
+    //Should this be under FSQueue? Worried about making it ASync
+    NSURL *directoryURL = [self _basePathForProject];
+    NSArray *domains = [self _directoriesInDirectory:directoryURL];
+    
+    for (NSURL *domain in domains) {
+        map[domain.lastPathComponent] = [NSMutableDictionary dictionary];
+        NSArray *identifiers = [self _filesInDirectory:domain];
+        for (NSURL *identifier in identifiers) {
+            map[domain.lastPathComponent][identifier.lastPathComponent] = [@{MRMapPathKey:identifier} mutableCopy];
+        }
+    }
+}
 
 - (void)memoryWarningReceived {
 	// Cleanup.
@@ -104,6 +119,48 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
 //TODO: Assert Identifier for all functions
 
+- (NSArray *)_directoriesInDirectory:(NSURL *)url {
+    NSMutableArray *array = [NSMutableArray array];
+    NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
+    NSDirectoryEnumerator *enumerator = [[NSFileManager defaultManager] enumeratorAtURL:url includingPropertiesForKeys:keys options:0 errorHandler:^(NSURL *url, NSError *error) { return YES;}];
+    
+    for (NSURL *url in enumerator) {
+        NSError *error;
+        NSNumber *isDirectory = nil;
+        if (! [url getResourceValue:&isDirectory forKey:NSURLIsDirectoryKey error:&error]) {
+            // handle error
+        }
+        else if (! [isDirectory boolValue]) {
+            // No error and it’s not a directory; do something with the file
+        }
+        else {
+            [array addObject:url];
+        }
+    }
+    
+    return array;
+}
+
+- (NSArray *)_filesInDirectory:(NSURL *)url {
+    NSMutableArray *array = [NSMutableArray array];
+    NSArray *keys = [NSArray arrayWithObject:NSURLIsRegularFileKey];
+    NSDirectoryEnumerator *enumerator = [[NSFileManager defaultManager] enumeratorAtURL:url includingPropertiesForKeys:keys options:0 errorHandler:^(NSURL *url, NSError *error) { return YES;}];
+    
+    for (NSURL *url in enumerator) {
+        NSError *error;
+        NSNumber *isDirectory = nil;
+        if (![url getResourceValue:&isDirectory forKey:NSURLIsDirectoryKey error:&error]) {
+            // handle error
+        }
+        else if ([isDirectory boolValue]) {
+            // No error and it’s not a directory; do something with the file
+        }
+        else {
+            [array addObject:url];
+        }
+    }
+}
+
 - (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
@@ -122,6 +179,18 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 	return NO;
 }
 
+- (NSURL *)_basePathForProject {
+    NSArray *scope = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    if (scope.count) {
+        NSURL *base = [scope objectAtIndex:0];
+        base = [base URLByAppendingPathComponent:MRBasePathKey isDirectory:YES];
+        
+        return base;
+    }
+    
+    return nil;
+}
+
 - (NSURL *)_pathForIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
     if (!identifier) {
         // XXX: Should establish consistency of either throwing exception, or ignoring it.
@@ -133,16 +202,13 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         domain = [self defaultDomain];
     }
     
-    NSArray *scope = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    if (scope.count) {
-        NSURL *base = [scope objectAtIndex:0];
+    NSURL *base = [self _basePathForProject];
+    if (base) {
         base = [base URLByAppendingPathComponent:domain isDirectory:YES];
         base = [base URLByAppendingPathComponent:identifier];
-        
-        return base;
     }
     
-	return nil;
+	return base;
 }
 
 - (NSDictionary *)_imageDictionaryForUniqueIdentifier:(id)identifier inTargetDomain:(NSString *)domain {

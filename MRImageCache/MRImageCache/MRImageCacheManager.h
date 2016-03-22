@@ -45,7 +45,7 @@
  In add methods, NSURL expects a filesystem URL
 */
 
-- (void)addImage:(UIImage *__nonnull)image uniqueIdentifier:(NSString *__nullable)identifier targetDomain:(nullable NSString *)domain completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;;
+- (void)addImage:(UIImage *__nonnull)image uniqueIdentifier:(NSString *__nullable)identifier targetDomain:(nullable NSString *)domain completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;
 
 - (void)addImage:(UIImage *__nonnull)image uniqueIdentifier:(NSString *__nullable)identifier completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;;
 
