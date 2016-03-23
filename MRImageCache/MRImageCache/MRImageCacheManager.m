@@ -9,10 +9,14 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
-NSString *MRDefaultDomain = nil;
-NSString *MRShortTermDomain  = nil;
-NSString *MRLongTermDomain   = nil;
-NSString *MRWorkingDomain    = nil;
+typedef NS_ENUM(NSUInteger, MRErrorType) {
+    MRErrorTypeDefault = 0
+};
+
+NSString *MRDefaultDomain   = nil;
+NSString *MRShortTermDomain = nil;
+NSString *MRLongTermDomain  = nil;
+NSString *MRWorkingDomain   = nil;
 
 static NSString *const MRMapImageKey      = @"d";
 static NSString *const MRMapPathKey       = @"p";
@@ -131,6 +135,20 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 // XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
 // XXX: So our code should sanity check before calling to here.
 
+- (NSError *)_errorForType:(MRErrorType)type {
+    NSError *error = nil;
+    
+    switch (type) {
+        case MRErrorTypeDefault:
+            break;
+            
+        default:
+            break;
+    }
+    
+    return error;
+}
+
 - (NSArray *)_directoriesInDirectory:(NSURL *)url {
     NSMutableArray *array = [NSMutableArray array];
     NSArray *keys = [NSArray arrayWithObject:NSURLIsDirectoryKey];
@@ -240,6 +258,12 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     
     if (!image) {
         //Populate Error
+        if (![[NSFileManager defaultManager] fileExistsAtPath:url.path]) {
+            
+        }
+        else if (![url isFileURL]) {
+            
+        }
     }
     
     return image;
