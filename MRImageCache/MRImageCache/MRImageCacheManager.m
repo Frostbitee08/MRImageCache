@@ -9,72 +9,81 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
-static NSString *const MRMapImageKey = @"d";
-static NSString *const MRMapPathKey = @"p";
-static NSString *const MRBasePathKey = @"MRI";
+NSString *MRDefaultDomain = nil;
+NSString *MRShortTermDomain  = nil;
+NSString *MRLongTermDomain   = nil;
+NSString *MRWorkingDomain    = nil;
+
+static NSString *const MRMapImageKey      = @"d";
+static NSString *const MRMapPathKey       = @"p";
+static NSString *const MRBasePathKey      = @"MRI";
 static const char *MRFileSystemQueueTitle = "MRIFileSystemQueue";
-static const char *MRNetworkQueueTitle = "MRINetworkQueue";
+static const char *MRNetworkQueueTitle    = "MRINetworkQueue";
 
 static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 
-
 @implementation MRImageCacheManager {
-	dispatch_queue_t fileSystemQueue;
-	dispatch_queue_t networkQueue;
-	
-	BOOL useIdleRange;
-	NSTimeInterval idleRange;
-	
-	BOOL useMaximumDatabaseSize;
-	NSInteger maximumDatabaseSize;
-	
+    dispatch_queue_t fileSystemQueue;
+    dispatch_queue_t networkQueue;
+    
+    BOOL useIdleRange;
+    NSTimeInterval idleRange;
+    
+    BOOL useMaximumDatabaseSize;
+    NSInteger maximumDatabaseSize;
+    
     NSMutableDictionary *map;
 }
 
 #pragma mark - Class Methods
 
 + (instancetype)sharedInstance {
-	static id _instance = nil;
-	static dispatch_once_t token;
-	dispatch_once(&token, ^{
-		_instance = [[super alloc] initPrivate];
-	});
-	return _instance;
+    static id _instance = nil;
+    static dispatch_once_t token;
+    dispatch_once(&token, ^{
+        _instance = [[super alloc] initPrivate];
+    });
+    return _instance;
 }
 
 - (void)setIdleRetainRange:(NSTimeInterval)range {
-	if (range <= 0) {
-		useIdleRange = false;
-	}
-	else {
-		idleRange = range;
-		//TODO: Update Database with new range
-	}
+    if (range <= 0) {
+        useIdleRange = false;
+    }
+    else {
+        idleRange = range;
+        //TODO: Update Database with new range
+    }
 }
 
 - (void)setMaximumDatabaseSize:(NSInteger)kilobytes {
-	if (kilobytes <= 0) {
-		useMaximumDatabaseSize = NO;
-	}
-	else {
-		useMaximumDatabaseSize = kilobytes;
-		//TODO: Update Database with new maximum size
-	}
+    if (kilobytes <= 0) {
+        useMaximumDatabaseSize = NO;
+    }
+    else {
+        useMaximumDatabaseSize = kilobytes;
+        //TODO: Update Database with new maximum size
+    }
 }
 
 #pragma mark - Initializers
 
 - (instancetype)initPrivate {
-	self = [super init];
-	if (self) {
+    self = [super init];
+    if (self) {
+        MRDefaultDomain   = [self defaultDomain];
+        MRShortTermDomain = [self shortTermCacheDomain];
+        MRLongTermDomain  = [self longTermCacheDomain];
+        MRWorkingDomain   = [self workingCacheDomain];
+        
         fileSystemQueue = dispatch_queue_create(MRFileSystemQueueTitle, 0);
         networkQueue    = dispatch_queue_create(MRNetworkQueueTitle, 0);
         map             = [NSMutableDictionary dictionary];
-		
-		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(memoryWarningReceived) name:UIApplicationDidReceiveMemoryWarningNotification object:nil];
         [self populateMap];
-	}
-	return self;
+    }
+    return self;
 }
 
 - (void)populateMap {
@@ -92,7 +101,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (void)memoryWarningReceived {
-	// Cleanup.
+    // Cleanup.
 }
 
 - (NSArray *)allDomains {
@@ -100,11 +109,11 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSString *)defaultDomain {
-	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mric"];
+    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mric"];
 }
 
 - (NSString *)shortTermCacheDomain {
-	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricShortTerm"];
+    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricShortTerm"];
 }
 
 - (NSString *)longTermCacheDomain {
@@ -112,12 +121,15 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSString *)workingCacheDomain {
-	return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
+    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
 }
 
 #pragma mark - Helpers
 
 //TODO: Assert Identifier for all functions
+// XXX: Should establish consistency of either throwing exception, or ignoring it.
+// XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
+// XXX: So our code should sanity check before calling to here.
 
 - (NSArray *)_directoriesInDirectory:(NSURL *)url {
     NSMutableArray *array = [NSMutableArray array];
@@ -159,6 +171,8 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
             [array addObject:url];
         }
     }
+    
+    return array;
 }
 
 - (BOOL)_moveFileFromPath:(NSURL *)path toDestination:(NSURL *)destination withUniqueIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain error:(NSError **)error {
@@ -176,13 +190,13 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
             return YES;
         }
     }
-	return NO;
+    return NO;
 }
 
 - (NSURL *)_basePathForProject {
     NSArray *scope = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     if (scope.count) {
-        NSURL *base = [scope objectAtIndex:0];
+        NSURL *base = [NSURL URLWithString:[scope objectAtIndex:0]];
         base = [base URLByAppendingPathComponent:MRBasePathKey isDirectory:YES];
         
         return base;
@@ -192,14 +206,8 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSURL *)_pathForIdentifier:(NSString *)identifier inTargetDomain:(NSString *)domain {
-    if (!identifier) {
-        // XXX: Should establish consistency of either throwing exception, or ignoring it.
-        // XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
-        // XXX: So our code should sanity check before calling to here.
+    if (!identifier || !domain) {
         return nil;
-    }
-    if (!domain) {
-        domain = [self defaultDomain];
     }
     
     NSURL *base = [self _basePathForProject];
@@ -208,18 +216,12 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         base = [base URLByAppendingPathComponent:identifier];
     }
     
-	return base;
+    return base;
 }
 
 - (NSDictionary *)_imageDictionaryForUniqueIdentifier:(id)identifier inTargetDomain:(NSString *)domain {
-    if (!identifier) {
-        // XXX: Should establish consistency of either throwing exception, or ignoring it.
-        // XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
-        // XXX: So our code should sanity check before calling to here.
+    if (!identifier || !domain) {
         return nil;
-    }
-    if (!domain) {
-        domain = [self defaultDomain];
     }
     
     if ([map.allKeys containsObject:domain]) {
@@ -232,79 +234,97 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     return nil;
 }
 
-- (void)_imageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-	dispatch_barrier_async(fileSystemQueue, ^{
-		// XXX: [url.filePathURL path], [url path], [url.fileReferenceURL path], absoluteURL, meh.
-		UIImage *image = [UIImage imageWithContentsOfFile:[url.filePathURL path]];
-		
-		if (image) handler(image, nil);
-		else {
-			NSError *error = [[NSError alloc] initWithDomain:@"domain" code:404 userInfo:nil];
-			handler(nil, error);
-		}
-	});
-		
+- (UIImage *)_imageFromURL:(NSURL *)url error:(NSError **)error {
+    // XXX: [url.filePathURL path], [url path], [url.fileReferenceURL path], absoluteURL, meh.
+    UIImage *image = [UIImage imageWithContentsOfFile:[url.filePathURL path]];
+    
+    if (!image) {
+        //Populate Error
+    }
+    
+    return image;
 }
 
 // TODO: Add NSError for MRIErrorType Enum
 // TODO: Also declare MRI Error Domain
 
-#pragma mark - Modifiers
+#pragma mark - Add
 
-- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
-    dispatch_barrier_async(fileSystemQueue, ^{
-        NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
-        
-        [[NSFileManager defaultManager] removeItemAtURL:target error:nil];
-        [[NSFileManager defaultManager] createFileAtPath:target.path contents:UIImagePNGRepresentation(image) attributes:nil];
-        
+- (BOOL)addImageSynchronously:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain error:(NSError **)error {
+    NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+    
+    [[NSFileManager defaultManager] removeItemAtURL:target error:nil];
+    BOOL success = [[NSFileManager defaultManager] createFileAtPath:target.path contents:UIImagePNGRepresentation(image) attributes:nil];
+    
+    if (success) {
         if (![map.allKeys containsObject:domain]) {
             map[domain] = [NSMutableDictionary  dictionary];
         }
-        
         map[domain][identifier] = [@{MRMapPathKey:target} mutableCopy];
+    }
+    
+    return success;
+}
+
+- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    dispatch_barrier_async(fileSystemQueue, ^{
+        NSError *error = nil;
+        BOOL success = [self addImageSynchronously:image uniqueIdentifier:identifier targetDomain:domain error:&error];
         
-        handler(YES, nil);
+        if (handler) {
+            handler(success, error);
+        }
     });
 }
 
-- (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
-	if (![url isFileReferenceURL]) {
-		// TODO: throw exception, or do something.
-		return;
-	}
+- (UIImage *)addImageFromURLSynchronously:(NSURL *)url targetDomain:(NSString *)domain error:(NSError **)error {
+    if (![url isFileReferenceURL]) {
+        // TODO: throw exception, or do something.
+        return nil;
+    }
     
-    [self _imageFromURL:url completionHandler:^(UIImage *image, NSError *error) {
-        NSString *identifier = url.lastPathComponent;
-        __weak typeof(NSMutableDictionary) *weakMap = map;
-        [self addImage:image uniqueIdentifier:identifier targetDomain:domain completionHandler:^(BOOL success, NSError *error) {
-            if (success) {
-                weakMap[domain][identifier][MRMapImageKey] = image;
-                handler(image, error);
-            }
-            else {
-                handler(nil, error);
-            }
-        }];
-    }];
+    UIImage *image = [UIImage imageWithContentsOfFile:[url.filePathURL path]];
+    if (image) {
+        if ([self addImageSynchronously:image uniqueIdentifier:url.lastPathComponent targetDomain:domain error:error]) {
+            return image;
+        }
+    }
+    
+    return nil;
+}
+
+- (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+    dispatch_barrier_async(fileSystemQueue, ^{
+        NSError *error = nil;
+        UIImage *image = [self addImageFromURLSynchronously:url targetDomain:domain error:&error];
+        
+        if (handler) {
+            handler(image, error);
+        }
+    });
+}
+
+#pragma mark - Remove
+
+- (BOOL)removeImageSynchronouslyWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain error:(NSError **)error {
+    NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+    return [[NSFileManager defaultManager] removeItemAtURL:target error:error];
 }
 
 - (void)removeImageWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
     dispatch_barrier_async(fileSystemQueue, ^{
         NSError *error = nil;
-        NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+        BOOL success = [self removeImageSynchronouslyWithIdentifier:identifier targetDomain:domain error:&error];
         
-        [[NSFileManager defaultManager] removeItemAtURL:target error:&error];
-        if (error) {
-            handler(NO, error);
-        }
-        else {
-            handler(YES, error);
+        if (handler) {
+            handler(success, error);
         }
     });
 }
 
-- (void)moveImageWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target completionHandler:(void (^)(BOOL success, NSError * error))handler {
+#pragma mark - Move
+
+- (BOOL)moveImageSynchronouslyWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target error:(NSError **)error {
     if (![map.allKeys containsObject:current]) {
         // TODO: Throw Exception for bad API usage
     }
@@ -315,19 +335,26 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         NSURL *currentPath = [self _pathForIdentifier:identifier inTargetDomain:current];
         NSURL *targetPath = [self _pathForIdentifier:identifier inTargetDomain:target];
         
-        dispatch_barrier_async(fileSystemQueue, ^{
-            NSError *error = nil;
-            if ([self _moveFileFromPath:currentPath toDestination:targetPath withUniqueIdentifier:identifier inTargetDomain:target error:&error]) {
-                [self removeImageWithIdentifier:identifier targetDomain:current completionHandler:handler];
-            }
-            else {
-                handler(FALSE, error);
-            }
-        });
+        if ([self _moveFileFromPath:currentPath toDestination:targetPath withUniqueIdentifier:identifier inTargetDomain:target error:error]) {
+            return [self removeImageSynchronouslyWithIdentifier:identifier targetDomain:current error:error];
+        }
     }
+    
+    return false;
 }
 
-- (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
+- (void)moveImageWithUniqueIdentifier:(NSString *)identifier currentDomain:(NSString *)current targetDomain:(NSString *)target completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    dispatch_barrier_async(fileSystemQueue, ^{
+        NSError *error = nil;
+        BOOL success = [self moveImageSynchronouslyWithUniqueIdentifier:identifier currentDomain:current targetDomain:target error:&error];
+        
+        if (handler) {
+            handler(success, error);
+        }
+    });
+}
+
+- (BOOL)moveAllImagesSynchronouslyInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite error:(NSError **)error {
     if (![map.allKeys containsObject:current]) {
         // TODO: Throw Exception for bad API usage
     }
@@ -337,20 +364,56 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     else {
         // TODO: Merge Domnains into target, and remove current
     }
+    
+    return false;
+}
+
+- (void)moveAllImagesInDomain:(NSString *)current toDomain:(NSString *)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^)(BOOL success, NSError * error))handler {
+    dispatch_barrier_async(fileSystemQueue, ^{
+        NSError *error = nil;
+        BOOL success = [self moveAllImagesSynchronouslyInDomain:current toDomain:target overwriteFilesInTarget:overwrite error:&error];
+        if (handler) handler(success, error);
+    });
 }
 
 #pragma mark - Accessors
 
-- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+- (UIImage *)fetchImageSynchronouslyWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain error:(NSError **)error {
     NSDictionary *imageDictionary = [self _imageDictionaryForUniqueIdentifier:identifer inTargetDomain:domain];
-    
     //Check Memory
     if (imageDictionary[MRMapImageKey]) {
-        handler(imageDictionary[MRMapImageKey], nil);
+        return imageDictionary[MRMapImageKey];
     }
     //Check Filesystem
     else if (imageDictionary[MRMapPathKey]) {
-        [self _imageFromURL:imageDictionary[MRMapPathKey] completionHandler:handler];
+        return [self _imageFromURL:imageDictionary[MRMapPathKey] error:error];
+    }
+    //Fetch From Remote
+    else if (request) {
+        //TODO: Fetch From Remote Synchronously
+    }
+    
+    return nil;
+}
+
+- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
+    NSDictionary *imageDictionary = [self _imageDictionaryForUniqueIdentifier:identifer inTargetDomain:domain];
+    //Check Memory
+    if (imageDictionary[MRMapImageKey]) {
+        if (handler) {
+            handler(imageDictionary[MRMapImageKey], nil);
+        }
+    }
+    //Check Filesystem
+    else if (imageDictionary[MRMapPathKey]) {
+        dispatch_barrier_async(fileSystemQueue, ^{
+            NSError *error = nil;
+            UIImage *image = [self _imageFromURL:imageDictionary[MRMapPathKey] error:&error];
+            
+            if (handler) {
+                handler(image, error);
+            }
+        });
     }
     //Fetch From Remote
     else if (request) {
@@ -362,44 +425,31 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
                 NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
                 
                 if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
-                    handler(nil, error2);
+                    if (handler) handler(nil, error2);
                 }
                 else {
-                    [self _imageFromURL:toLocation completionHandler:^(UIImage *image, NSError *error) {
-                        if (image) map[domain][identifer][MRMapImageKey] = image;
-                        handler(image, error);
-                    }];
+                    NSError *error = nil;
+                    UIImage *image = [self _imageFromURL:toLocation error:&error];
+                    
+                    if (image) map[domain][identifer][MRMapImageKey] = image;
+                    if (handler) handler(image, error);
                 }
             });
         }];
         [task resume];
     }
+    //Call Failure
+    else {
+        if (handler) handler(nil, nil);
+    }
+}
+
+- (UIImage *)fetchImageSynchronouslyWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain error:(NSError **)error {
+    return [self fetchImageSynchronouslyWithRequest:nil uniqueIdentifier:identifier targetDomain:domain error:error];
 }
 
 - (void)fetchImageWithUniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-	[self fetchImageWithRequest:nil uniqueIdentifier:identifier targetDomain:domain completionHandler:handler];
-}
-
-#pragma mark - Conveniences (Pass Through)
-
-- (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(BOOL success, NSError * error))handler {
-	[self addImage:image uniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
-}
-
-- (void)addImageFromURL:(NSURL *)url completionHandler:(void (^)(UIImage *, NSError *))handler {
-	[self addImageFromURL:url targetDomain:nil completionHandler:handler];
-}
-
-- (void)removeImageWithIdentifier:(id)identifier completionHandler:(void (^)(BOOL success, NSError * error))handler {
-	[self removeImageWithIdentifier:identifier targetDomain:nil completionHandler:handler];
-}
-
-- (void)fetchImageWithRequest:(NSURLRequest *)request uniqueIdentifier:(NSString *)identifer completionHandler:(void (^)(UIImage *image, NSError *error))handler {
-	[self fetchImageWithRequest:request uniqueIdentifier:identifer targetDomain:nil completionHandler:handler];
-}
-
-- (void)fetchImageWithUniqueIdentifier:(NSString *)identifier completionHandler:(void (^)(UIImage *, NSError *))handler {
-	[self fetchImageWithUniqueIdentifier:identifier targetDomain:nil completionHandler:handler];
+    [self fetchImageWithRequest:nil uniqueIdentifier:identifier targetDomain:domain completionHandler:handler];
 }
 
 @end
