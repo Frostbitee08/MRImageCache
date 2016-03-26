@@ -114,15 +114,15 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSString *)shortTermCacheDomain {
-    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricShortTerm"];
+    return @"mricShortTerm";
 }
 
 - (NSString *)longTermCacheDomain {
-    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricLongTerm"];
+    return @"mricLongTerm";
 }
 
 - (NSString *)workingCacheDomain {
-    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mricWorking"];
+    return @"mricWorking";
 }
 
 #pragma mark - Helpers
@@ -280,7 +280,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (UIImage *)addImageFromURLSynchronously:(NSURL *)url targetDomain:(NSString *)domain error:(NSError **)error {
-    if (![url isFileReferenceURL]) {
+    if (![url isFileURL]) {
         // TODO: throw exception, or do something.
         return nil;
     }
@@ -426,12 +426,10 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
             NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
             
             if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
-                NSLog(@"move file failed: %@", error2);
                 if (handler) handler(nil, error2);
             }
             else {
                 dispatch_barrier_async(fileSystemQueue, ^{
-                    NSLog(@"Move File success");
                     NSError *error = nil;
                     UIImage *image = [self _imageFromURL:toLocation error:&error];
                     
