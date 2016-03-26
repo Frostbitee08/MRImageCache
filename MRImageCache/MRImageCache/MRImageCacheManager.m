@@ -9,14 +9,10 @@
 #import "MRImageCacheManager.h"
 #import "MRUtilities.h"
 
-typedef NS_ENUM(NSUInteger, MRErrorType) {
-    MRErrorTypeDefault = 0
-};
-
-NSString *MRDefaultDomain   = nil;
-NSString *MRShortTermDomain = nil;
-NSString *MRLongTermDomain  = nil;
-NSString *MRWorkingDomain   = nil;
+NSString *MRDefaultDomain = nil;
+NSString *MRShortTermDomain  = nil;
+NSString *MRLongTermDomain   = nil;
+NSString *MRWorkingDomain    = nil;
 
 static NSString *const MRMapImageKey      = @"d";
 static NSString *const MRMapPathKey       = @"p";
@@ -113,7 +109,8 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 }
 
 - (NSString *)defaultDomain {
-    return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mric"];
+    //return [[[NSBundle mainBundle] bundleIdentifier] stringByAppendingString:@"mric"];
+    return @"mric";
 }
 
 - (NSString *)shortTermCacheDomain {
@@ -134,20 +131,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 // XXX: Should establish consistency of either throwing exception, or ignoring it.
 // XXX: Maybe assume that this function will NEVER have a nil parameter, since it's internal.
 // XXX: So our code should sanity check before calling to here.
-
-- (NSError *)_errorForType:(MRErrorType)type {
-    NSError *error = nil;
-    
-    switch (type) {
-        case MRErrorTypeDefault:
-            break;
-            
-        default:
-            break;
-    }
-    
-    return error;
-}
 
 - (NSArray *)_directoriesInDirectory:(NSURL *)url {
     NSMutableArray *array = [NSMutableArray array];
@@ -197,6 +180,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     [[NSFileManager defaultManager] removeItemAtURL:destination error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:path toURL:destination error:error]) {
         if (error) {
+            //            NSLog(@"Move Error: %@", error);
             return NO;
         }
         else {
@@ -214,7 +198,7 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 - (NSURL *)_basePathForProject {
     NSArray *scope = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     if (scope.count) {
-        NSURL *base = [NSURL URLWithString:[scope objectAtIndex:0]];
+        NSURL *base = [NSURL fileURLWithPath:[scope objectAtIndex:0]];
         base = [base URLByAppendingPathComponent:MRBasePathKey isDirectory:YES];
         
         return base;
@@ -258,12 +242,6 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
     
     if (!image) {
         //Populate Error
-        if (![[NSFileManager defaultManager] fileExistsAtPath:url.path]) {
-            
-        }
-        else if (![url isFileURL]) {
-            
-        }
     }
     
     return image;
@@ -444,21 +422,23 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
         NSURLSessionDownloadTask *task = [[NSURLSession sharedSession] downloadTaskWithRequest:request completionHandler:^(NSURL *location, NSURLResponse *response, NSError *error) {
             if (error) { handler(nil, error); return; }
             
-            dispatch_barrier_async(fileSystemQueue, ^{
-                NSError *error2 = nil;
-                NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
-                
-                if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
-                    if (handler) handler(nil, error2);
-                }
-                else {
+            NSError *error2 = nil;
+            NSURL *toLocation = [self _pathForIdentifier:identifer inTargetDomain:domain];
+            
+            if (![self _moveFileFromPath:location toDestination:toLocation withUniqueIdentifier:identifer inTargetDomain:domain error:&error2]) {
+                NSLog(@"move file failed: %@", error2);
+                if (handler) handler(nil, error2);
+            }
+            else {
+                dispatch_barrier_async(fileSystemQueue, ^{
+                    NSLog(@"Move File success");
                     NSError *error = nil;
                     UIImage *image = [self _imageFromURL:toLocation error:&error];
                     
                     if (image) map[domain][identifer][MRMapImageKey] = image;
                     if (handler) handler(image, error);
-                }
-            });
+                });
+            }
         }];
         [task resume];
     }

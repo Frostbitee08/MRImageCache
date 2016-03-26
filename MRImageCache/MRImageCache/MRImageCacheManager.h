@@ -83,7 +83,7 @@ extern NSString *__nonnull MRWorkingDomain;
 /*
  Fetch methods check to see if an image exists before adding and returning.
  Can pass anything as identifier. Perhaps even the URL you use to fetch it. It will be hashed.
-*/
+ */
 
 - (void)fetchImageWithRequest:(NSURLRequest *__nullable)request uniqueIdentifier:(NSString *__nonnull)identifer targetDomain:(NSString *__nonnull)domain completionHandler:(void (^__nullable)(UIImage *__nullable image, NSError *__nullable error))handler;
 
