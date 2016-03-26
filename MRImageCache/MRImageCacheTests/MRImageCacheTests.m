@@ -55,27 +55,27 @@
 	
 	// These methods may do something in the future. Not entirely terrible to test them.
 	
-	MRImageCacheManager *cacher = [MRImageCacheManager sharedInstance];
-	
-	[cacher addImage:[UIImage new] uniqueIdentifier:nil completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
-		
-	}];
-	
-	[cacher addImageFromURL:[NSURL new] completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
-		
-	}];
-	
-	[cacher removeImageWithIdentifier:[NSString new] completionHandler:^(BOOL success, NSError * _Nullable error) {
-		
-	}];
-	
-	[cacher fetchImageWithRequest:nil uniqueIdentifier:nil completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
-		
-	}];
-	
-	[cacher fetchImageWithUniqueIdentifier:[NSString new] completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
-		
-	}];
+//	MRImageCacheManager *cacher = [MRImageCacheManager sharedInstance];
+//	
+//	[cacher addImage:[UIImage new] uniqueIdentifier:nil targetDomain:nil completionHandler:^(BOOL succ, NSError * _Nullable error) {
+//		
+//	}];
+//	
+//	[cacher addImageFromURL:[NSURL new] completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
+//		
+//	}];
+//	
+//	[cacher removeImageWithIdentifier:[NSString new] completionHandler:^(BOOL success, NSError * _Nullable error) {
+//		
+//	}];
+//	
+//	[cacher fetchImageWithRequest:nil uniqueIdentifier:nil completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
+//		
+//	}];
+//	
+//	[cacher fetchImageWithUniqueIdentifier:[NSString new] completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
+//		
+//	}];
 	
 }
 

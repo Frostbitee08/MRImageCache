@@ -59,9 +59,9 @@ extern NSString *__nonnull MRWorkingDomain;
 
 - (BOOL)addImageSynchronously:(UIImage *__nonnull)image uniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
 
-- (void)addImageFromURL:(NSURL *__nonnull)url targetDomain:(NSString *__nonnull)domain completionHandler:(void (^__nullable)(UIImage *__nullable image, NSError *__nullable error))handler;
+- (void)addImageFromURL:(NSURL *__nonnull)url uniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nonnull)domain completionHandler:(void (^__nullable)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (UIImage * _Nullable)addImageFromURLSynchronously:(NSURL *__nonnull)url targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
+- (nullable UIImage *)addImageFromURLSynchronously:(NSURL *__nonnull)url uniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
 
 //Remove Images
 
@@ -75,7 +75,7 @@ extern NSString *__nonnull MRWorkingDomain;
 
 - (BOOL)moveImageSynchronouslyWithUniqueIdentifier:(NSString *__nonnull)identifier currentDomain:(NSString *__nonnull)current targetDomain:(NSString *__nonnull)target error:(NSError *__nullable*__nullable)error;
 
-- (void)moveAllImagesInDomain:(NSString *__nonnull)current toDomain:(NSString *__nonnull)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;;
+- (void)moveAllImagesInDomain:(NSString *__nonnull)current toDomain:(NSString *__nonnull)target overwriteFilesInTarget:(BOOL)overwrite completionHandler:(void (^__nonnull)(BOOL success, NSError *__nullable error))handler;
 
 - (BOOL)moveAllImagesSynchronouslyInDomain:(NSString *__nonnull)current toDomain:(NSString *__nonnull)target overwriteFilesInTarget:(BOOL)overwrite error:(NSError *__nullable*__nullable)error;
 
@@ -87,10 +87,10 @@ extern NSString *__nonnull MRWorkingDomain;
 
 - (void)fetchImageWithRequest:(NSURLRequest *__nullable)request uniqueIdentifier:(NSString *__nonnull)identifer targetDomain:(NSString *__nonnull)domain completionHandler:(void (^__nullable)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (UIImage * _Nullable)fetchImageSynchronouslyWithRequest:(NSURLRequest *__nullable)request uniqueIdentifier:(NSString *__nonnull)identifer targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
+- (nullable UIImage *)fetchImageSynchronouslyWithRequest:(NSURLRequest *__nullable)request uniqueIdentifier:(NSString *__nonnull)identifer targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
 
 - (void)fetchImageWithUniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nonnull)domain completionHandler:(void (^__nullable)(UIImage *__nullable image, NSError *__nullable error))handler;
 
-- (UIImage * _Nullable)fetchImageSynchronouslyWithUniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
+- (nullable UIImage *)fetchImageSynchronouslyWithUniqueIdentifier:(NSString *__nonnull)identifier targetDomain:(NSString *__nonnull)domain error:(NSError *__nullable*__nullable)error;
 
 @end

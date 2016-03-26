@@ -253,73 +253,151 @@ static const __unused float MRNetworkRequestDefaultTimeout = 30.0f;
 #pragma mark - Add
 
 - (BOOL)addImageSynchronously:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain error:(NSError **)error {
-    NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
-    
-    [[NSFileManager defaultManager] removeItemAtURL:target error:nil];
-    BOOL success = [[NSFileManager defaultManager] createFileAtPath:target.path contents:UIImagePNGRepresentation(image) attributes:nil];
-    
-    if (success) {
-        if (![map.allKeys containsObject:domain]) {
-            map[domain] = [NSMutableDictionary  dictionary];
-        }
-        map[domain][identifier] = [@{MRMapPathKey:target} mutableCopy];
-    }
-    
-    return success;
+	
+	dispatch_semaphore_t wait = dispatch_semaphore_create(0);
+	
+	__block BOOL didSucceed = NO;
+	__block NSError *addError = nil;
+	
+	[self addImage:image uniqueIdentifier:identifier targetDomain:domain completionHandler:^(BOOL success, NSError * _Nullable error) {
+		didSucceed = success;
+		addError = error;
+		dispatch_semaphore_signal(wait);
+	}];
+	
+	dispatch_semaphore_wait(wait, NSEC_PER_SEC * MRNetworkRequestDefaultTimeout);
+	// XXX: Fix timeout. Doesn't really make sense.
+	// Need assurance that this handler will ALWAYS be called to.
+	
+	if (addError && error) {
+		*error = addError;
+	}
+	
+    return didSucceed;
 }
 
 - (void)addImage:(UIImage *)image uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
     dispatch_barrier_async(fileSystemQueue, ^{
-        NSError *error = nil;
-        BOOL success = [self addImageSynchronously:image uniqueIdentifier:identifier targetDomain:domain error:&error];
-        
-        if (handler) {
-            handler(success, error);
-        }
+		
+		NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+		
+		NSError *moveError = nil;
+		
+		[[NSFileManager defaultManager] removeItemAtURL:target error:&moveError];
+		
+		if (moveError) {
+			// XXX: if error is due to the file not existing, ignore
+			// XXX: if error is due to actual issue, stop here.
+		}
+		
+		BOOL success = [[NSFileManager defaultManager] createFileAtPath:target.path contents:UIImagePNGRepresentation(image) attributes:nil];
+		// TODO: change attributes to have NSFileProtection
+		
+		if (success) {
+			if (![map.allKeys containsObject:domain]) {
+				map[domain] = [NSMutableDictionary  dictionary];
+			}
+			map[domain][identifier] = [@{MRMapPathKey:target} mutableCopy];
+			
+			handler(YES, nil);
+		}
+		
+		else {
+			handler(NO, [NSError errorWithDomain:@"erorrDomain which I swear I made." code:1 userInfo:nil]);
+			// TODO: Fill in proper error here.
+		}
     });
 }
 
-- (UIImage *)addImageFromURLSynchronously:(NSURL *)url targetDomain:(NSString *)domain error:(NSError **)error {
-    if (![url isFileURL]) {
-        // TODO: throw exception, or do something.
-        return nil;
-    }
-    
-    UIImage *image = [UIImage imageWithContentsOfFile:[url.filePathURL path]];
-    if (image) {
-        if ([self addImageSynchronously:image uniqueIdentifier:url.lastPathComponent targetDomain:domain error:error]) {
-            return image;
-        }
-    }
-    
-    return nil;
+- (UIImage *)addImageFromURLSynchronously:(NSURL *)url uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain error:(NSError **)error {
+	
+	dispatch_semaphore_t wait = dispatch_semaphore_create(0);
+	
+	__block NSError *retError = nil;
+	__block UIImage *retImage = nil;
+	
+	[self addImageFromURL:url uniqueIdentifier:identifier  targetDomain:domain completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
+		retImage = image;
+		retError = error;
+		
+		dispatch_semaphore_signal(wait);
+	}];
+	
+	dispatch_semaphore_wait(wait, NSEC_PER_SEC * MRNetworkRequestDefaultTimeout);
+	// XXX: fix rimeout.
+	
+	if (retError && error) {
+		*error = retError;
+	}
+	
+	return retImage;
 }
 
-- (void)addImageFromURL:(NSURL *)url targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+- (void)addImageFromURL:(NSURL *)url uniqueIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(UIImage * image, NSError * error))handler {
+	if (![url isFileURL]) {
+		// TODO: throw exception here, or generate good error for the handler
+		// XXX: MAKE SURE TO CALL THE HANDLER IF NOT THROWING AN EXCEPTION.
+		return;
+	}
+	
+	
     dispatch_barrier_async(fileSystemQueue, ^{
-        NSError *error = nil;
-        UIImage *image = [self addImageFromURLSynchronously:url targetDomain:domain error:&error];
-        
-        if (handler) {
-            handler(image, error);
-        }
+		UIImage *image = [UIImage imageWithContentsOfFile:[url.filePathURL path]];
+		
+		if (!image) {
+			// handler(nil, )
+			// pass good error.
+			return;
+		}
+		
+		[self addImage:image uniqueIdentifier:identifier targetDomain:domain completionHandler:^(BOOL success, NSError * _Nullable error) {
+			if (success) {
+				handler(image, nil);
+			}
+			else {
+				handler(nil, error);
+			}
+		}];
     });
 }
 
 #pragma mark - Remove
 
 - (BOOL)removeImageSynchronouslyWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain error:(NSError **)error {
-    NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
-    return [[NSFileManager defaultManager] removeItemAtURL:target error:error];
+	dispatch_semaphore_t wait = dispatch_semaphore_create(0);
+	
+	__block BOOL didSucceed = NO;
+	__block NSError *retError = nil;
+	
+	[self removeImageWithIdentifier:identifier targetDomain:domain completionHandler:^(BOOL success, NSError * _Nullable error) {
+		
+		didSucceed = success;
+		retError = error;
+		
+		dispatch_semaphore_signal(wait);
+	}];
+	
+	dispatch_semaphore_wait(wait, NSEC_PER_SEC * MRNetworkRequestDefaultTimeout);
+	// TOOD: again, fix timeout here.
+	
+	if (retError && error) {
+		*error = retError;
+	}
+	
+	return didSucceed;
 }
 
 - (void)removeImageWithIdentifier:(NSString *)identifier targetDomain:(NSString *)domain completionHandler:(void (^)(BOOL success, NSError * error))handler {
     dispatch_barrier_async(fileSystemQueue, ^{
-        NSError *error = nil;
-        BOOL success = [self removeImageSynchronouslyWithIdentifier:identifier targetDomain:domain error:&error];
+		
+		NSURL *target = [self _pathForIdentifier:identifier inTargetDomain:domain];
+		
+		NSError *removeError = nil;
+		
+		BOOL success = [[NSFileManager defaultManager] removeItemAtURL:target error:&removeError];
         
         if (handler) {
-            handler(success, error);
+            handler(success, removeError);
         }
     });
 }
